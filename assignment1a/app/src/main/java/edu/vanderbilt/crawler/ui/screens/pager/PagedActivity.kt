@@ -20,6 +20,7 @@ import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentStatePagerAdapter
 import androidx.viewpager.widget.ViewPager
 import edu.vanderbilt.crawler.R
+import edu.vanderbilt.crawler.databinding.ActivityPagedBinding
 import edu.vanderbilt.crawler.extensions.findImageViewWithTransitionName
 import edu.vanderbilt.crawler.ui.views.ToolbarManager
 import edu.vanderbilt.crawler.ui.views.ZoomOutPageTransformer
@@ -27,8 +28,6 @@ import edu.vanderbilt.crawler.utils.KtLogger
 import edu.vanderbilt.crawler.utils.Preconditions
 import edu.vanderbilt.crawler.utils.debug
 import edu.vanderbilt.crawler.utils.warn
-import kotlinx.android.synthetic.main.activity_paged.*
-import org.jetbrains.anko.find
 import java.util.*
 
 /**
@@ -174,6 +173,7 @@ class PagedActivity :
          * Debug logging tag.
          */
         private val TAG = "PagedActivity"
+
         /**
          * String key names used for intent extras.
          */
@@ -232,13 +232,15 @@ class PagedActivity :
     /**
      * Required override for ToolbarManager interface.
      */
-    override val toolbar by lazy { find<Toolbar>(R.id.toolbar) }
+    override val toolbar by lazy { findViewById<Toolbar>(R.id.toolbar) }
 
     var title: String
         get() = toolbar.title.toString()
         set(value) {
             toolbar.title = value
         }
+
+    private lateinit var binding: ActivityPagedBinding
 
     /**
      * Hook method called when a new instance of Activity is created. One time
@@ -251,8 +253,9 @@ class PagedActivity :
         // Always call the superclass onCreate().
         super.onCreate(savedInstanceState)
 
+        binding = ActivityPagedBinding.inflate(layoutInflater)
         // Load the view from the XML layout.
-        setContentView(R.layout.activity_paged)
+        setContentView(binding.root)
 
         // This activity uses a CoordinatorLayout with a custom Toolbar.
         initToolbar()
@@ -287,23 +290,24 @@ class PagedActivity :
         pagerAdapter = FragmentPagerAdapter(supportFragmentManager)
 
         // Create and initialize the view pager.
-        assert(viewPager != null)
-        viewPager!!.adapter = pagerAdapter
-        viewPager.setPageTransformer(true, ZoomOutPageTransformer())
+        with(binding) {
+            viewPager.adapter = pagerAdapter
+            viewPager.setPageTransformer(true, ZoomOutPageTransformer())
 
-        // Always notify adapter when contents is changed.
-        pagerAdapter!!.notifyDataSetChanged()
+            // Always notify adapter when contents is changed.
+            pagerAdapter!!.notifyDataSetChanged()
 
-        // Won't set the title for the initially loaded fragment because
-        // the pagerAdapter calls onPage selected before the pager adapter
-        // has fully created the fragments. The only place to be sure that
-        // the fragment has been created is when the shared element is
-        // being started in the preDrawListener (so the title is set there).
-        viewPager.addOnPageChangeListener(object : ViewPager.SimpleOnPageChangeListener() {
-            override fun onPageSelected(position: Int) {
-                title = pagerAdapter?.getPageTitle(position).toString()
-            }
-        })
+            // Won't set the title for the initially loaded fragment because
+            // the pagerAdapter calls onPage selected before the pager adapter
+            // has fully created the fragments. The only place to be sure that
+            // the fragment has been created is when the shared element is
+            // being started in the preDrawListener (so the title is set there).
+            viewPager.addOnPageChangeListener(object : ViewPager.SimpleOnPageChangeListener() {
+                override fun onPageSelected(position: Int) {
+                    title = pagerAdapter?.getPageTitle(position).toString()
+                }
+            })
+        }
     }
 
     /**
@@ -313,7 +317,7 @@ class PagedActivity :
         super.onStart()
 
         // Set the current page to image position passed by the activity.
-        viewPager!!.currentItem = position
+        binding.viewPager.currentItem = position
     }
 
     /**
@@ -324,7 +328,7 @@ class PagedActivity :
     override fun onBackPressed() {
         // Set the activity result to an intent that contains the transition
         // name of the currently displayed image view.
-        val position = viewPager!!.currentItem
+        val position = binding.viewPager.currentItem
         val intent = Intent()
         intent.putExtra(EXTRA_POSITION, position)
         setResult(Activity.RESULT_OK, intent)
@@ -377,7 +381,7 @@ class PagedActivity :
         observerView?.doOnPreDraw {
             debug("$TAG: Starting the postponed transition ...")
             supportStartPostponedEnterTransition()
-            val position = viewPager!!.currentItem
+            val position = binding.viewPager.currentItem
             title = pagerAdapter?.getPageTitle(position).toString()
         }
     }
@@ -431,7 +435,7 @@ class PagedActivity :
                     "sharedElement map to sharedElementCallback!")
         }
 
-        val position = viewPager!!.currentItem
+        val position = binding.viewPager.currentItem
         val fragment = pagerAdapter!!.getItem(position)
 
         // The fragment view will unfortunately be null if an orientation change
@@ -446,7 +450,7 @@ class PagedActivity :
         // Shared element transition requires a layout with an image view with
         // id "R.id.image_view". This should be rethought...
         val transitionName = position.toString()
-        val imageView = fragment.view!!.findImageViewWithTransitionName(transitionName)
+        val imageView = fragment.requireView().findImageViewWithTransitionName(transitionName)
         if (imageView == null) {
             warn("$TAG: Unable to locate image view for shared element transition")
             names.clear()
@@ -505,7 +509,7 @@ class PagedActivity :
          * not handle this properly.
          */
         @SuppressLint("UseSparseArrays")
-        internal val fragmentMap = HashMap<Int, PagedFragment>()
+        val fragmentMap = HashMap<Int, PagedFragment>()
 
         override fun getPageTitle(position: Int): CharSequence {
             return fragmentMap[position]?.title ?: ""

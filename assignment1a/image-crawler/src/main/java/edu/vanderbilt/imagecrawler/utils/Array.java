@@ -167,11 +167,6 @@ public interface Array<E>
     }
 
     /**
-     * Exposed in this interface for testing only.
-     */
-    void ensureCapacityInternal(int minCapacity);
-
-    /**
      * Exposed for in this interface testing only.
      */
     void rangeCheck(int index);

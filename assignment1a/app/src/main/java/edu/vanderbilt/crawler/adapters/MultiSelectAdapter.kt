@@ -101,7 +101,7 @@ abstract class MultiSelectAdapter<T, VH : SelectableViewHolder>(
      */
     override fun onBindViewHolder(holder: VH, position: Int) {
         with(holder) {
-            assert(position == holder.adapterPosition)
+            assert(position == holder.bindingAdapterPosition)
             selectable = isItemSelected(position)
             activated = selectable
             itemView.setOnLongClickListener {
@@ -109,7 +109,7 @@ abstract class MultiSelectAdapter<T, VH : SelectableViewHolder>(
                     if (onSelectionListener?.onActionModeStarting() == true) {
                         actionMode = startActionMode()
                         onSelectionListener?.run { onActionModeStarted() }
-                        toggleSelection(adapterPosition)
+                        toggleSelection(bindingAdapterPosition)
                         activated = true
                         selectable = true
                     }
@@ -126,11 +126,11 @@ abstract class MultiSelectAdapter<T, VH : SelectableViewHolder>(
                 if (selectionEnabled && actionMode != null) {
                     // Use holder.adapterPosition which may have changed since
                     // the initial binding of this holder
-                    toggleSelection(adapterPosition)
+                    toggleSelection(bindingAdapterPosition)
                     activated = !activated
                     selectable = activated
                 } else {
-                    onSelectionListener?.onItemClick(itemView, adapterPosition)
+                    onSelectionListener?.onItemClick(itemView, bindingAdapterPosition)
                 }
             }
         }

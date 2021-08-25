@@ -1,19 +1,5 @@
 package edu.vanderbilt.crawler.preferences
 
-import android.content.Context
-import android.content.SharedPreferences
-import io.reactivex.Observable
-import android.content.Intent
-import android.net.ConnectivityManager
-import android.content.IntentFilter
-import io.reactivex.disposables.Disposables
-import android.content.BroadcastReceiver
-import edu.vanderbilt.crawler.app.App
-import io.reactivex.ObservableEmitter
-import io.reactivex.schedulers.Schedulers
-import io.reactivex.ObservableOnSubscribe
-import java.lang.ref.WeakReference
-
 /*
 class RxSharedPref<T: Any> constructor(context: Context, key: String) : ObservableOnSubscribe<T> {
     private var weakContext: WeakReference<Context> = WeakReference(context.applicationContext)

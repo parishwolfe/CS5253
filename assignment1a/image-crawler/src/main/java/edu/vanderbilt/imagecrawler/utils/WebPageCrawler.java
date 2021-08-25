@@ -4,6 +4,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.function.Function;
@@ -12,6 +13,7 @@ import edu.vanderbilt.imagecrawler.crawlers.ImageCrawler;
 import edu.vanderbilt.imagecrawler.platform.Controller;
 
 import static edu.vanderbilt.imagecrawler.utils.Crawler.Type.PAGE;
+import static edu.vanderbilt.imagecrawler.utils.Student.isUndergraduate;
 
 /**
  * This helper class works around deficiencies in the jsoup library
@@ -22,7 +24,7 @@ public class WebPageCrawler implements Crawler {
     /**
      * Platform dependent function that mas a uri string to an InputStream.
      */
-    private Function<String, InputStream> mMapUrlToStream;
+    private final Function<String, InputStream> mMapUrlToStream;
 
     /**
      * Constructor required for handling platform dependent local crawling.
@@ -104,9 +106,8 @@ public class WebPageCrawler implements Crawler {
     /**
      * Encapsulates/hides the JSoup Document object into a generic container.
      */
-    protected class DocumentPage implements Page {
-        private String uri;
-        private Document document;
+    protected static class DocumentPage implements Page {
+        private final Document document;
 
         protected DocumentPage(Document document, String uri) {
             if (Controller.loggingEnabled()) {
@@ -120,7 +121,6 @@ public class WebPageCrawler implements Crawler {
             }
 
             this.document = document;
-            this.uri = uri;
         }
 
         @Override
@@ -150,9 +150,21 @@ public class WebPageCrawler implements Crawler {
         public Array<URL> getPageElementsAsUrls(Type... types) {
             Array<URL> results = new UnsynchronizedArray<>();
 
-            getPageElementsAsStrings(types).stream()
-                    .map(ExceptionUtils.rethrowFunction(URL::new))
-                    .forEach(results::add);
+            if (isUndergraduate()) {
+                getPageElementsAsStrings(types)
+                        .forEach(url -> {
+                            try {
+                                results.add(new URL(url));
+                            } catch (MalformedURLException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
+            } else {
+                getPageElementsAsStrings(types)
+                        .stream()
+                        .map(ExceptionUtils.rethrowFunction(URL::new))
+                        .forEach(results::add);
+            }
 
             return results;
         }
@@ -161,9 +173,14 @@ public class WebPageCrawler implements Crawler {
         public Array<String> getPageElementsAsStrings(Type... types) {
             Array<String> results = new UnsynchronizedArray<>();
 
-            getPageElements(types).stream()
-                    .map(WebPageElement::getUrl)
-                    .forEach(results::add);
+            if (isUndergraduate()) {
+                getPageElements(types)
+                        .forEach(element -> results.add(element.getUrl()));
+            } else {
+                getPageElements(types).stream()
+                        .map(WebPageElement::getUrl)
+                        .forEach(results::add);
+            }
 
             return results;
         }

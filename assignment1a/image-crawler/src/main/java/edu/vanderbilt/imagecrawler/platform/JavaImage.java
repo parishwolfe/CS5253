@@ -22,11 +22,13 @@ public class JavaImage implements PlatformImage {
     /**
      * Cache item used to report progress.
      */
-    Cache.Item mCacheItem;
+    private Cache.Item mCacheItem;
+
     /**
      * The Bitmap our Image stores.
      */
     private BufferedImage mImage;
+
     /**
      * Size of image.
      */
@@ -67,13 +69,11 @@ public class JavaImage implements PlatformImage {
      * @param outputStream
      */
     @Override
-    public void writeImage(OutputStream outputStream)
-            throws IOException {
-        BufferedImage bufferedImage = mImage;
-        if (bufferedImage == null) {
+    public void writeImage(OutputStream outputStream) throws IOException {
+        if (mImage == null) {
             System.out.println("null image");
         } else {
-            ImageIO.write(bufferedImage,
+            ImageIO.write(mImage,
                     "png",
                     outputStream);
         }
@@ -131,6 +131,14 @@ public class JavaImage implements PlatformImage {
     @Override
     public int size() {
         return mSize;
+    }
+
+    /**
+     * Returns the associated cache item.
+     */
+    @Override
+    public Cache.Item getCacheItem() {
+        return mCacheItem;
     }
 
     private int updateProgress(Cache.Item newItem, float progress, int lastProgress) {

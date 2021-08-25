@@ -15,6 +15,8 @@ import android.view.View
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
+import android.widget.Toast
+import android.widget.Toast.LENGTH_SHORT
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
@@ -25,20 +27,11 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPS
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HIDDEN
 import edu.vanderbilt.crawler.R
 import edu.vanderbilt.crawler.adapters.MultiSelectAdapter
-import edu.vanderbilt.crawler.extensions.animateScale
-import edu.vanderbilt.crawler.extensions.asyncFetchImage
-import edu.vanderbilt.crawler.extensions.hideKeyboard
-import edu.vanderbilt.crawler.extensions.postDelayed
+import edu.vanderbilt.crawler.databinding.ActivityWebViewBinding
+import edu.vanderbilt.crawler.extensions.*
 import edu.vanderbilt.crawler.utils.KtLogger
-import kotlinx.android.synthetic.main.activity_web_view.*
-import org.jetbrains.anko.contentView
-import org.jetbrains.anko.dimen
-import org.jetbrains.anko.find
-import org.jetbrains.anko.toast
 import java.net.URI
 import java.net.URLEncoder
-import java.util.*
-import kotlin.collections.ArrayList
 
 /**
  * A generic visual URL picker that uses a web view and a recycler
@@ -74,13 +67,15 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
 
     // Framework resources can't be accessed by Anko bindings.
     private val searchEditText: EditText by lazy {
-        searchView.find<EditText>(R.id.search_src_text)
+        binding.searchView.findViewById(R.id.search_src_text)
     }
 
     // Mutable properties first initialized from, but also
     // loaded from savedInstanceState (config change).
     private lateinit var url: String
     private lateinit var urls: MutableList<String>
+    private val webViewFragment
+        get() = supportFragmentManager.findFragmentById(R.id.fragment) as WebViewUrlFragment
 
     // Immutable properties that are only initialized
     // from passed intent.
@@ -91,65 +86,71 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
         intent.getIntExtra(KEY_MAX_URLS, -1)
     }
 
-    val webViewFragment: WebViewUrlFragment by lazy {
-        fragment as WebViewUrlFragment
-    }
+    lateinit var binding: ActivityWebViewBinding
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_web_view)
-        setSupportActionBar(webViewToolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.setDisplayShowTitleEnabled(true)
 
-        with(savedInstanceState ?: intent.extras) {
-            url = this?.getString(KEY_URL) ?: getString(R.string.default_web_view)
+        binding = ActivityWebViewBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        with(binding) {
+            setSupportActionBar(webViewToolbar)
+            supportActionBar?.setDisplayHomeAsUpEnabled(true)
+            supportActionBar?.setDisplayShowTitleEnabled(true)
+
+            with(savedInstanceState ?: intent.extras) {
+                url = this?.getString(KEY_URL) ?: getString(R.string.default_web_view)
+                if (imagePicker) {
+                    val list = this?.getStringArrayList(KEY_PICK_URLS) ?: emptyList<String>()
+                    urls = list.toMutableList()
+                }
+            }
+
+            with(webView) {
+                settings.javaScriptEnabled = true
+                webViewClient = WebViewCallback()
+            }
+
             if (imagePicker) {
-                val list = this?.getStringArrayList(KEY_PICK_URLS) ?: emptyList<String>()
-                urls = list.toMutableList()
+                initializeImagePicker()
+            } else {
+                initializeUrlPicker()
             }
-        }
 
-        initializeSearchView(searchView)
-
-        with(webView) {
-            settings.javaScriptEnabled = true
-            webViewClient = WebViewCallback()
-        }
-
-        if (imagePicker) {
-            initializeImagePicker()
-        } else {
-            initializeUrlPicker()
-        }
-
-        copyFab.setOnClickListener {
-            copyFab.animateScale(false) {
-                finishPicker()
+            copyFab.setOnClickListener {
+                copyFab.animateScale(false) {
+                    finishPicker()
+                }
             }
+
+            // Set FAB scaled size to 0 so that anmateFab extension
+            // will grow it into view in onResume().
+            copyFab.isVisible = true
+            copyFab.scaleX = 0f
+            copyFab.scaleY = 0f
+
+            webView.loadUrl(url)
         }
+    }
 
-        // Set FAB scaled size to 0 so that anmateFab extension
-        // will grow it into view in onResume().
-        copyFab.isVisible = true
-        copyFab.scaleX = 0f
-        copyFab.scaleY = 0f
-
-        webView.loadUrl(url)
-
-        updateViews()
+    override fun onResumeFragments() {
+        super.onResumeFragments()
     }
 
     override fun onResume() {
         super.onResume()
         // Animate Fab into view if not already visible.
         updateFabPosition()
-        if (!copyFab.isShown) {
-            postDelayed(1000) {
-                copyFab.animateScale(true)
+        with(binding) {
+            if (!copyFab.isShown) {
+                postDelayed(1000) {
+                    copyFab.animateScale(true)
+                }
             }
         }
+        updateViews()
     }
 
     /**
@@ -158,7 +159,7 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
      * view input widget. Also forwards any user entered query to the
      * web view.
      */
-    private fun initializeSearchView(searchView: SearchView) {
+    internal fun initializeSearchView(searchView: SearchView) {
         searchEditText.setSelectAllOnFocus(true)
         webViewFragment.adapter.onSelectionListener =
                 object : MultiSelectAdapter.OnSelectionListener {
@@ -202,7 +203,7 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
             setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                 override fun onQueryTextSubmit(query: String): Boolean {
                     if (!query.isBlank()) {
-                        webView.loadUrl(queryToUrl(query))
+                        binding.webView.loadUrl(queryToUrl(query))
                     }
 
                     return false
@@ -223,7 +224,7 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
         throw AssertionError("Not currently setup to handle new bottom sheet peek logic.")
 
         @Suppress("UNREACHABLE_CODE")
-        webView.setOnLongClickListener {
+        binding.webView.setOnLongClickListener {
             val hitTestResult = (it as WebView).hitTestResult
             // Asynchronously checks that the url points to an image
             // before adding it to the image list.
@@ -232,11 +233,11 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
         }
 
         @Suppress("UNREACHABLE_CODE")
-        with(BottomSheetBehavior.from(bottomSheet)) {
+        with(BottomSheetBehavior.from(binding.bottomSheet)) {
             isHideable = true
-            peekHeight = dimen(R.dimen.url_list_peek_height)
+            peekHeight = resources.getDimensionPixelSize(R.dimen.url_list_peek_height)
             state = STATE_COLLAPSED
-            setBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+            addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
                 override fun onStateChanged(bottomSheet: View, newState: Int) {
                     if (newState == STATE_HIDDEN) {
                         state = STATE_COLLAPSED
@@ -256,14 +257,14 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
      * to a bottom sheet recycler view.
      */
     private fun initializeUrlPicker() {
-        with(BottomSheetBehavior.from(bottomSheet)) {
+        with(BottomSheetBehavior.from(binding.bottomSheet)) {
             isHideable = true
             state = STATE_HIDDEN
-            setBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+            addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
                 override fun onStateChanged(bottomSheet: View, newState: Int) {
                     if (newState == STATE_HIDDEN) {
 //                        state = STATE_COLLAPSED
-//                        peekHeight = dimen(R.dimen.min_peek_height)
+//                        peekHeight = resources.getDimensionPixelSize(R.dimen.min_peek_height)
                     }
 
                     updateFabPosition()
@@ -272,9 +273,9 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
                 override fun onSlide(bottomSheet: View, slideOffset: Float) {
                     updateFabPosition()
 //                    peekHeight = if (slideOffset < 0) {
-//                        dimen(R.dimen.min_peek_height)
+//                        resources.getDimensionPixelSize(R.dimen.min_peek_height)
 //                    } else {
-//                        dimen(R.dimen.url_list_peek_height)
+//                        resources.getDimensionPixelSize(R.dimen.url_list_peek_height)
 //                    }
                 }
             })
@@ -283,8 +284,10 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
 
     private fun updateFabPosition() {
         contentView?.apply {
-            val dist = bottom - bottomSheet.top
-            copyFab?.translationY = Math.min(-dist.toFloat(), 0f)
+            with(binding) {
+                val dist = bottom - bottomSheet.top
+                copyFab.translationY = Math.min(-dist.toFloat(), 0f)
+            }
         }
     }
 
@@ -294,7 +297,7 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
      */
     private fun addImageUrl(url: String?) {
         if (url == null) {
-            toast(R.string.selected_item_not_image_url)
+            Toast.makeText(this, R.string.selected_item_not_image_url, LENGTH_SHORT).show()
         } else with(webViewFragment) {
             // Async fetch call: only add the URL if really is an image.
             asyncFetchImage(url) { isImage ->
@@ -302,14 +305,15 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
                     push(url, maxUrls)
                     updateViews()
                 } else {
-                    toast(R.string.selected_item_not_image_url)
+                    Toast.makeText(this@WebViewActivity, R.string.selected_item_not_image_url,
+                            LENGTH_SHORT).show()
                 }
             }
         }
     }
 
     private fun updateViews() {
-        webActivityHintView.visibility =
+        binding.webActivityHintView.visibility =
                 if (webViewFragment.adapter.itemCount > 0)
                     View.GONE
                 else
@@ -326,10 +330,10 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                if (!webView.canGoBack()) {
+                if (!binding.webView.canGoBack()) {
                     NavUtils.navigateUpFromSameTask(this)
                 } else {
-                    webView.goBack()
+                    binding.webView.goBack()
                 }
                 return true
             }
@@ -343,9 +347,9 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
      */
     override fun onSaveInstanceState(outState: Bundle) {
         with(outState) {
-            putString(KEY_URL, webView.url)
+            putString(KEY_URL, binding.webView.url)
             putStringArrayList(KEY_PICK_URLS, ArrayList<String>(webViewFragment.urls))
-            putBoolean(KEY_SEARCH_VIEW_ICONIFIED, searchView.isIconified)
+            putBoolean(KEY_SEARCH_VIEW_ICONIFIED, binding.searchView.isIconified)
         }
         super.onSaveInstanceState(outState)
     }
@@ -372,7 +376,7 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
             try {
                 GOOGLE_SEARCH_URL + URLEncoder.encode(query, "UTF-8")
             } catch (e: Exception) {
-                toast("Unable to encode search string")
+                Toast.makeText(this, "Unable to encode search string", LENGTH_SHORT).show()
                 return query
             }
         }
@@ -387,18 +391,19 @@ class WebViewActivity : AppCompatActivity(), KtLogger {
         url = newUrl
         supportActionBar?.title = url
 
-        if (!searchView.isIconified) {
-            supportActionBar?.setDisplayHomeAsUpEnabled(true)
-            supportActionBar?.setDisplayShowTitleEnabled(true)
-            searchView.setQuery(null, false)
-            searchView.isIconified = true
+        with(binding) {
+            if (!searchView.isIconified) {
+                supportActionBar?.setDisplayHomeAsUpEnabled(true)
+                supportActionBar?.setDisplayShowTitleEnabled(true)
+                searchView.setQuery(null, false)
+                searchView.isIconified = true
+            }
         }
 
         hideKeyboard()
 
         if (!imagePicker) {
             webViewFragment.push(url, 1)
-            updateViews()
         }
     }
 

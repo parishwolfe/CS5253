@@ -84,5 +84,5 @@
         android:layout_below="@+id/threadsLabel"
         android:layout_marginTop="4dp"
         android:layout_toEndOf="@+id/strategyLabel"
-        android:text="CompletableFutures1" />
+        android:text="CompletableFutures" />
 </RelativeLayout>

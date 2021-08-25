@@ -82,7 +82,6 @@ public class Controller {
      * Constructs a new platform dependant image object.
      *
      * @param inputStream An input stream containing image data.
-     *
      * @return A new platform dependant image object.
      */
     public PlatformImage newImage(InputStream inputStream, Cache.Item item) {
@@ -116,7 +115,8 @@ public class Controller {
 
     /**
      * Helper for platform dependant logging.
-     * @param msg Message or format string.
+     *
+     * @param msg  Message or format string.
      * @param args Optional format arguments.
      */
     public void log(String msg, Object... args) {
@@ -230,6 +230,19 @@ public class Controller {
             if (val != null && !val.isEmpty()) {
                 mOptionsBuilder.rootUrl(val);
             }
+            return this;
+        }
+
+        /**
+         * Sets the {@code rootUrl} and returns a reference to this Builder so that the methods
+         * can
+         * be chained together.
+         *
+         * @param val flag determining if transforms should be processed locally or remotely.
+         * @return a reference to this Builder
+         */
+        public Builder localTransforms(boolean val) {
+            mOptionsBuilder.localTransforms(val);
             return this;
         }
 

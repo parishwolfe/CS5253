@@ -14,14 +14,8 @@ import androidx.interpolator.view.animation.FastOutLinearInInterpolator
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
-import edu.vanderbilt.crawler.extensions.LINEAR_OUT_SLOW_IN_INTERPOLATOR
-import edu.vanderbilt.crawler.extensions.SHOW_HIDE_ANIM_DURATION
+import edu.vanderbilt.crawler.extensions.*
 import edu.vanderbilt.crawler.ui.adapters.dpToPx
-import org.jetbrains.anko.bottomPadding
-import org.jetbrains.anko.leftPadding
-import org.jetbrains.anko.rightPadding
-import org.jetbrains.anko.topPadding
-
 
 /**
  * A circular loader is integrated with a floating action button.

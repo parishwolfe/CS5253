@@ -20,7 +20,7 @@ public class IOUtils {
      * Helper method that copies data from the source stream to the
      * destination stream.
      *
-     * @param in Input source stream.
+     * @param in  Input source stream.
      * @param out Output destination stream.
      * @return The number of bytes copied.
      * @throws IOException
@@ -46,15 +46,18 @@ public class IOUtils {
      *
      * @param in Input source stream.
      * @return The copied bytes.
-     * @throws IOException
      */
-    public static byte[] toBytes(InputStream in) throws IOException {
+    public static byte[] toBytes(InputStream in) {
         // Creates a new ByteArrayOutputStream to write the downloaded
         // contents to a byte array, which is a generic form of the
         // image.
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        copy(in, out);
-        return out.toByteArray();
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            copy(in, out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw ExceptionUtils.unchecked(e);
+        }
     }
 
     /**

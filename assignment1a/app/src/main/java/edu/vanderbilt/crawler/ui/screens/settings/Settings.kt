@@ -15,36 +15,40 @@ import edu.vanderbilt.imagecrawler.utils.Options
  */
 internal object Settings {
     /** Default pref values */
-    val DEFAULT_CRAWL_STRATEGY = CrawlerType.SEQUENTIAL_LOOPS
-    val DEFAULT_LOCAL_CRAWL = false
-    val DEFAULT_CRAWL_DEPTH = 3
-    val DEFAULT_TRANSFORM_TYPES = Transform.Type.values().toList()
-    val DEFAULT_CRAWL_SPEED = 100 // [0..100]%
-    val DEFAULT_DEBUG_LOGGING = false
-    val DEFAULT_SPEED_BAR_STATE = STATE_COLLAPSED
-    val DEFAULT_WEB_URL = Options.DEFAULT_WEB_URL
-    val DEFAULT_GRID_SCALE = 6
-    val DEFAULT_TRASPARANCEY = 10
-    val DEFAULT_SHOW_PROGRESS = false
-    val DEFAULT_SHOW_STATE = false
-    val DEFAULT_SHOW_SIZE = false
-    val DEFAULT_SHOW_THREAD = false
+    private val DEFAULT_CRAWL_STRATEGY = CrawlerType.SEQUENTIAL_LOOPS
+    private const val DEFAULT_LOCAL_CRAWL = false
+    const val DEFAULT_CRAWL_DEPTH = 3
+    private val DEFAULT_TRANSFORM_TYPES = Transform.Type.values().toList()
+    const val DEFAULT_CRAWL_SPEED = 100 // [0..100]%
+    private const val DEFAULT_DEBUG_LOGGING = false
+    private const val DEFAULT_SPEED_BAR_STATE = STATE_COLLAPSED
+    private val DEFAULT_WEB_URL = Options.DEFAULT_WEB_URL
+    private const val DEFAULT_GRID_SCALE = 6
+    private const val DEFAULT_TRANSPARENCY = 10
+    private const val DEFAULT_SHOW_PROGRESS = false
+    private const val DEFAULT_SHOW_STATE = false
+    private const val DEFAULT_SHOW_SIZE = false
+    private const val DEFAULT_SHOW_THREAD = false
+    private const val DEFAULT_LOCAL_TRANSFORMS = false
+    private const val DEFAULT_SAVE_ON_EXIT = true
 
     /** Pref keys */
-    val CRAWL_STRATEGY_PREF = "crawlStrategyPref"
-    val LOCAL_CRAWL_PREF = "localCrawlPref"
-    val CRAWL_DEPTH_PREF = "crawlDepthPref"
-    val TRANSFORM_TYPES_PREF = "transformTypesPref"
-    val CRAWL_SPEED_PREF = "crawlSpeedPref"
-    val DEBUG_LOGGING_PREF = "debugLoggingPref"
-    val SPEED_BAR_STATE_PREF = "speedBarStatePref"
-    val WEB_URL_PREF = "webUrlPref"
-    val GRID_SCALE_PREF = "gridViewScalePref"
-    val TRANSPARENCY_PREF = "transparencyPref"
-    val SHOW_PROGRESS_PREF = "showProgressPref"
-    val SHOW_STATE_PREF = "showStatePref"
-    val SHOW_SIZE_PREF = "showSizePref"
-    val SHOW_THREAD_PREF = "showThreadPref"
+    const val CRAWL_STRATEGY_PREF = "crawlStrategyPref"
+    const val LOCAL_CRAWL_PREF = "localCrawlPref"
+    const val CRAWL_DEPTH_PREF = "crawlDepthPref"
+    const val TRANSFORM_TYPES_PREF = "transformTypesPref"
+    const val CRAWL_SPEED_PREF = "crawlSpeedPref"
+    const val DEBUG_LOGGING_PREF = "debugLoggingPref"
+    const val SPEED_BAR_STATE_PREF = "speedBarStatePref"
+    const val WEB_URL_PREF = "webUrlPref"
+    const val GRID_SCALE_PREF = "gridViewScalePref"
+    const val TRANSPARENCY_PREF = "transparencyPref"
+    const val SHOW_PROGRESS_PREF = "showProgressPref"
+    const val SHOW_STATE_PREF = "showStatePref"
+    const val SHOW_SIZE_PREF = "showSizePref"
+    const val SHOW_THREAD_PREF = "showThreadPref"
+    const val LOCAL_TRANSFORMS_PREF = "localTransformsPref"
+    const val SAVE_ON_EXIT_PREF = "SaveOnExitPref"
 
     /** SeekBar min/max range. */
     val TRANSPARENCY_RANGE = Range(5, 50)
@@ -59,18 +63,42 @@ internal object Settings {
     var debugLogging: Boolean by Preference(DEFAULT_DEBUG_LOGGING, DEBUG_LOGGING_PREF)
     var speedBarState: Int by Preference(DEFAULT_SPEED_BAR_STATE, SPEED_BAR_STATE_PREF)
     var webUrl: String by Preference(DEFAULT_WEB_URL, WEB_URL_PREF)
-    var viewTransparency: Int by Preference(DEFAULT_TRASPARANCEY, TRANSPARENCY_PREF)
+    var viewTransparency: Int by Preference(DEFAULT_TRANSPARENCY, TRANSPARENCY_PREF)
     var viewScale: Int by Preference(DEFAULT_GRID_SCALE, GRID_SCALE_PREF)
     var showProgress: Boolean by Preference(DEFAULT_SHOW_PROGRESS, SHOW_PROGRESS_PREF)
     var showState: Boolean by Preference(DEFAULT_SHOW_STATE, SHOW_STATE_PREF)
     var showSize: Boolean by Preference(DEFAULT_SHOW_SIZE, SHOW_SIZE_PREF)
     var showThread: Boolean by Preference(DEFAULT_SHOW_THREAD, SHOW_THREAD_PREF)
+    var localTransforms: Boolean by Preference(DEFAULT_LOCAL_TRANSFORMS, LOCAL_TRANSFORMS_PREF)
+    var saveOnExit: Boolean by Preference(DEFAULT_SAVE_ON_EXIT, SAVE_ON_EXIT_PREF)
 
     fun reset() {
         with(prefs.edit()) {
             clear()
             apply()
         }
+    }
+
+    fun resetToDefaults(simulationRunning: Boolean) {
+        if (!simulationRunning) {
+            crawlStrategy = DEFAULT_CRAWL_STRATEGY
+            crawlDepth = DEFAULT_CRAWL_DEPTH
+            localCrawl = DEFAULT_LOCAL_CRAWL
+            transformTypes = DEFAULT_TRANSFORM_TYPES
+            webUrl= DEFAULT_WEB_URL
+        }
+
+        crawlSpeed = DEFAULT_CRAWL_SPEED
+        debugLogging = DEFAULT_DEBUG_LOGGING
+        speedBarState = DEFAULT_SPEED_BAR_STATE
+        viewScale= DEFAULT_GRID_SCALE
+        viewTransparency = DEFAULT_TRANSPARENCY
+        showProgress = DEFAULT_SHOW_PROGRESS
+        showState = DEFAULT_SHOW_STATE
+        showSize = DEFAULT_SHOW_SIZE
+        showThread = DEFAULT_SHOW_THREAD
+        localTransforms = DEFAULT_LOCAL_TRANSFORMS
+        saveOnExit = DEFAULT_SAVE_ON_EXIT
     }
 }
 

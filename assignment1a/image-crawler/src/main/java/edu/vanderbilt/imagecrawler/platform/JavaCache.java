@@ -1,7 +1,6 @@
 package edu.vanderbilt.imagecrawler.platform;
 
 import java.io.File;
-import java.io.IOException;
 
 /**
  * A singleton Java Cache object implementation that specifies

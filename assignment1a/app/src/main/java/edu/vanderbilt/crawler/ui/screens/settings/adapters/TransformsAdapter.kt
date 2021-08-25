@@ -67,6 +67,8 @@ open class TransformsAdapter : EnumCheckedListAdapter<Transform.Type> {
 
             val adapter = TransformsAdapter(viewGroup.context, selectedTransforms)
 
+            viewGroup.removeAllViews()
+
             (supportedTransforms.indices).forEach {
                 val view = adapter.newView(LayoutInflater.from(viewGroup.context), it, viewGroup)
                 // Set id to NO_ID so that framework does not save/restore checkbox state. The

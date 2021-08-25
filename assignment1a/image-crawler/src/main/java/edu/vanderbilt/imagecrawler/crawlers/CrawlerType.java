@@ -15,15 +15,12 @@ public enum CrawlerType {
     SEQUENTIAL_STREAMS("SequentialStreamsCrawler"),
     PARALLEL_STREAMS1("ParallelStreamsCrawler1"),
     PARALLEL_STREAMS2("ParallelStreamsCrawler2"),
-    PARALLEL_STREAMS3("ParallelStreamsCrawler3"),
-    COMPLETABLE_FUTURES1("CompletableFuturesCrawler1"),
-    COMPLETABLE_FUTURES2("CompletableFuturesCrawler2"),
-    FORK_JOIN1("ForkJoinCrawler1"),
-    FORK_JOIN2("ForkJoinCrawler2"),
+    COMPLETABLE_FUTURES("CompletableFuturesCrawler"),
+    FORK_JOIN("ForkJoinCrawler"),
     KOTLIN_COROUTINES("KotlinCoroutineCrawler"),
-    RX_OBSERVABLE_SEQUENTIAL("RxJava.RxFlowableParallelCrawler"),
-    RX_OBSERVABLE_PARALLEL("Java.RxObservableParallelCrawler"),
-    RX_FLOWABLE_PARALLEL("Java.RxFlowableParallelCrawler");
+    RX_OBSERVABLE("RxObservableCrawler"),
+    RX_FLOWABLE("RxFlowableCrawler"),
+    PROJECT_REACTOR("ReactorCrawler");
 
     public final String className;
 

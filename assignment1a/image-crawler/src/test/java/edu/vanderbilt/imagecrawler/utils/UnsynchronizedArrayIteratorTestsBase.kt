@@ -3,11 +3,11 @@ package edu.vanderbilt.imagecrawler.utils
 import admin.ArrayHelper
 import admin.AssignmentTests
 import org.junit.Assert.*
-import org.junit.Test
 import java.util.*
+import kotlin.NoSuchElementException
 
 /**
- * Tests UnsynchronizedArray Iterator inner class if base class [skipTest] flag is false.
+ * Tests UnsynchronizedArray Iterator inner class.
  */
 open class UnsynchronizedArrayIteratorTestsBase : AssignmentTests() {
     /**
@@ -17,16 +17,12 @@ open class UnsynchronizedArrayIteratorTestsBase : AssignmentTests() {
     private val mShuffledMixedInput = ArrayHelper.constructShuffledMixedInput()
 
     open fun `iterator must handle an empty array`() {
-        if (skipTest) return
-
         val array = newArray<Any>()
         val iterator = array.iterator()
         assertFalse(iterator.hasNext())
     }
 
     open fun `iterator hasNext() and next() should work in conjunction to properly allow access to all array elements`() {
-        if (skipTest) return
-
         val input = mShuffledMixedInput
         val array = newArray(input)
 
@@ -39,21 +35,19 @@ open class UnsynchronizedArrayIteratorTestsBase : AssignmentTests() {
 
         assertEquals(expected.hasNext(), iterator.hasNext())
 
-        exception.expect(NoSuchElementException::class.java)
-        iterator.next()
+        assertThrows(NoSuchElementException::class.java) {
+            iterator.next()
+        }
     }
 
     open fun `iterator next() must throw NoSuchElementException when array is empty`() {
-        if (skipTest) return
-
         val array = newArray<Any>()
-        exception.expect(NoSuchElementException::class.java)
-        array.iterator().next()
+        assertThrows(NoSuchElementException::class.java) {
+            array.iterator().next()
+        }
     }
 
     open fun `iterator next() must throw NoSuchElementException for all calls after end of array is reached`() {
-        if (skipTest) return
-
         val input = mShuffledMixedInput
         val array = newArray(input)
         val iterator = array.iterator()
@@ -66,15 +60,14 @@ open class UnsynchronizedArrayIteratorTestsBase : AssignmentTests() {
         assertFalse(iterator.hasNext())
 
         repeat(10) {
-            exception.expect(NoSuchElementException::class.java)
-            iterator.next()
+            assertThrows(NoSuchElementException::class.java) {
+                iterator.next()
+            }
         }
     }
 
     open fun `iterator add() and set() methods must work as expected`() {
-        if (skipTest) return
-
-        val input = ArrayList<Any>()
+        val input = ArrayList<Any?>()
         val pool = ArrayHelper.constructShuffledMixedInput()
 
         val array = newArray<Any>()
@@ -119,14 +112,13 @@ open class UnsynchronizedArrayIteratorTestsBase : AssignmentTests() {
             ArrayHelper.assertSameIteratorContents(input.iterator(), array.iterator())
         }
 
-        exception.expect(NoSuchElementException::class.java)
-        array.iterator().next()
+        assertThrows(NoSuchElementException::class.java) {
+            array.iterator().next()
+        }
     }
 
     open fun `iterator remove() must be able to remove all elements`() {
-        if (skipTest) return
-
-        val input = mShuffledMixedInput
+        val input = mShuffledMixedInput.toMutableList()
         val array = newArray(input)
 
         ArrayHelper.assertSameIteratorContents(input.iterator(), array.iterator())
@@ -147,6 +139,19 @@ open class UnsynchronizedArrayIteratorTestsBase : AssignmentTests() {
         assertEquals(expected.hasNext(), iterator.hasNext())
         assertEquals(0, input.size.toLong())
         assertEquals(0, array.size().toLong())
+    }
+
+    open fun `iterator remove() throws and exception if called twice in a row`() {
+        val input = mShuffledMixedInput.toMutableList()
+        val array = newArray(input)
+        ArrayHelper.assertSameIteratorContents(input.iterator(), array.iterator())
+        val iterator = array.iterator()
+        assertTrue(iterator.hasNext())
+        iterator.next()
+        iterator.remove()
+        assertThrows(IllegalStateException::class.java) {
+            iterator.remove()
+        }
     }
 
     private fun <T> newArray(input: List<T>): Array<T> {

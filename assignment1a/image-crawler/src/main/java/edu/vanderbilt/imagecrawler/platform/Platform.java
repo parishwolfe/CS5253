@@ -65,4 +65,6 @@ public interface Platform {
 	 * @param args Optional format arguments.
 	 */
     void log(String msg, Object[] args);
+
+	String getBaseUrl();
 }

@@ -89,15 +89,17 @@ public class AdminHelpers {
      * Helper method that builds a Controller using the passed parameters
      * and passes this into the overloaded downloadIntoDirectory.
      *
-     * @Param rootUrl   The root url to start crawling from.
-     * @param transforms List of transforms to add or null for the default
-     *                   transform (NULL_TRANSFORM).
-     * @param crawlType  The crawler type to use.
-     * @param destDir    Destination directory.
-     * @param index      boolean flag indicating if indexing should be performed
-     *                   on the downloaded directory.
+     * @param rootUrl         The root url to start crawling from.
+     * @param localTransforms Local or remote transforms.
+     * @param crawlType       The crawler type to use.
+     * @param transforms      List of transforms to add or null for the default
+     *                        transform (NULL_TRANSFORM).
+     * @param destDir         Destination directory.
+     * @param index           boolean flag indicating if indexing should be performed
+     *                        on the downloaded directory.
      */
     public static void downloadIntoDirectory(String rootUrl,
+                                             boolean localTransforms,
                                              CrawlerType crawlType,
                                              List<Transform.Type> transforms,
                                              File destDir,
@@ -109,6 +111,7 @@ public class AdminHelpers {
                 Controller.newBuilder()
                         .transforms(transforms)
                         .rootUrl(rootUrl)
+                        .localTransforms(localTransforms)
                         .downloadPath(destDir.getAbsolutePath())
                         .build();
 
@@ -118,7 +121,7 @@ public class AdminHelpers {
     /**
      * Recursively compare the contents of the directory of downloaded
      * files with the contents of the "ground truth" directory.
-     *
+     * <p>
      * Note that the local parameter is required because images that
      * originate from the local web-pages directory will have different
      * cache file names from those originating from the web. Specifically,
@@ -239,7 +242,7 @@ public class AdminHelpers {
         }
     }
 
-   /**
+    /**
      * @return Local web pages directory for Java testing.
      */
     public static String getDefaultWebRootUrl() throws Exception {

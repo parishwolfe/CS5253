@@ -3,7 +3,7 @@ package edu.vanderbilt.crawler.viewmodels
 import android.annotation.SuppressLint
 import android.os.Parcelable
 import edu.vanderbilt.imagecrawler.platform.Cache
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
 import java.io.File
 
 @SuppressLint("ParcelCreator")

@@ -7,6 +7,7 @@
     tools:context=".ui.screens.main.MainActivity">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:theme="@style/AppTheme.AppBarOverlay">
@@ -50,7 +51,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:gravity="center"
-            android:text="@string/main_activity_hint"
+            android:text="@string/main_activity_search_hint"
             android:visibility="gone" />
     </FrameLayout>
 

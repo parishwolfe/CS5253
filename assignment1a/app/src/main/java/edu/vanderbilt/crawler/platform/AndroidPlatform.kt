@@ -5,7 +5,7 @@ import edu.vanderbilt.crawler.utils.KtLogger
 import edu.vanderbilt.crawler.utils.debug
 import edu.vanderbilt.imagecrawler.platform.Cache
 import edu.vanderbilt.imagecrawler.platform.Platform
-import edu.vanderbilt.imagecrawler.platform.Platform.*
+import edu.vanderbilt.imagecrawler.platform.Platform.LOCAL_WEB_PAGES_DIR_NAME
 import edu.vanderbilt.imagecrawler.platform.PlatformImage
 import java.io.InputStream
 import java.net.URL
@@ -20,6 +20,9 @@ object AndroidPlatform : Platform, KtLogger {
      */
     @JvmField
     val ASSETS_URI_PREFIX = "file:///android_assets"
+
+    @JvmField
+    val BASE_URL = "http://10.0.2.2:8081"
 
     /**
      * Returns the platform dependant [cache].
@@ -38,19 +41,27 @@ object AndroidPlatform : Platform, KtLogger {
     override fun log(msg: String, vararg args: Any?) = debug("DIAGNOSTICS: ${if (args.isEmpty()) msg else msg.format(*args)}")
 
     /**
+     * Return default local image transform (filter) server URL.
+     */
+    override fun getBaseUrl(): String {
+        return BASE_URL
+    }
+
+    fun isAssetsUri(uri: String) = uri.startsWith("$ASSETS_URI_PREFIX/")
+
+    /**
      * Creates an input stream for the passed [uri]. This method supports
      * both normal URLs and any URL located in the application assets.
      */
     override fun mapUriToInputStream(uri: String): InputStream? {
-        val assetsPrefix = AndroidPlatform.ASSETS_URI_PREFIX + "/"
 
         // Check if this input stream is for an image asset.
         val item = cache.getItem(uri, null)
 
         // Get the input stream.
         return when {
-            uri.startsWith(assetsPrefix) -> {
-                val path = "$LOCAL_WEB_PAGES_DIR_NAME/${uri.removePrefix(assetsPrefix)}"
+            isAssetsUri(uri) -> {
+                val path = "$LOCAL_WEB_PAGES_DIR_NAME/${uri.removePrefix("$ASSETS_URI_PREFIX/")}"
                 val inputStream = App.instance.assets.open(path)
 
                 // If the stream is for a cached image item, then wrap the

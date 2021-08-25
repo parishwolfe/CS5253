@@ -23,15 +23,16 @@ fun FloatingActionButton.setAnchor(anchorId: Int = View.NO_ID) {
     isGone = anchorId == View.NO_ID
 }
 
-var FloatingActionButton.behavior
+var FloatingActionButton.behavior: () -> FloatingActionButton.Behavior
     get() = {
         val params = (layoutParams as? CoordinatorLayout.LayoutParams)
-                ?: throw IllegalArgumentException("The view is not a child " +
-                        "of CoordinatorLayout")
+                ?: throw IllegalArgumentException(
+                        "The view is not a child of CoordinatorLayout")
         params.behavior as? FloatingActionButton.Behavior
-                ?: throw IllegalArgumentException("The view is not associated " +
-                        "with FloatingActionButton.Behavior")
+                ?: throw IllegalArgumentException(
+                        "The view is not associated with FloatingActionButton.Behavior")
     }
+
     set(behavior) {
         (layoutParams as CoordinatorLayout.LayoutParams).behavior =
                 behavior as? FloatingActionButton.Behavior

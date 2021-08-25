@@ -1,5 +1,6 @@
 package edu.vanderbilt.imagecrawler.utils
 
+import edu.vanderbilt.imagecrawler.utils.Student.Type.Graduate
 import org.junit.Before
 import org.junit.Test
 
@@ -14,7 +15,7 @@ class UnsynchronizedArrayIteratorTestsForGrads : UnsynchronizedArrayIteratorTest
      */
     @Before
     fun before() {
-        graduateTest()
+        runAs(Graduate)
     }
 
     @Test
@@ -45,5 +46,10 @@ class UnsynchronizedArrayIteratorTestsForGrads : UnsynchronizedArrayIteratorTest
     @Test
     override fun `iterator remove() must be able to remove all elements`() {
         super.`iterator remove() must be able to remove all elements`()
+    }
+
+    @Test
+    override fun `iterator remove() throws and exception if called twice in a row`() {
+        super.`iterator remove() throws and exception if called twice in a row`()
     }
 }

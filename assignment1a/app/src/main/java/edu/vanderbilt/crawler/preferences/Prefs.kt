@@ -163,7 +163,37 @@ object PreferenceProvider {
     /**
      * Custom preferences is not currently used.
      */
-    fun custom(context: Context = App.instance, name: String): SharedPreferences = context.getSharedPreferences(name, Context.MODE_PRIVATE)
+    fun custom(context: Context = App.instance, name: String): SharedPreferences =
+            context.getSharedPreferences(name, Context.MODE_PRIVATE)
+
+    /**
+     * Registers the passed [listener] to receive
+     * shared preference changes notifications.
+     */
+    fun addListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+    }
+
+    /**
+     * Unregisters the passed [listener] from receiving
+     * shared preference change notifications.
+     */
+    fun removeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        prefs.unregisterOnSharedPreferenceChangeListener(listener)
+    }
+
+    /**
+     * Clears all preferences stored with this provider.
+     */
+    @SuppressLint("CommitPrefEdits")
+    fun clear() {
+        // Clear all shared preferences.
+        prefs.run {
+            with(edit()) {
+                clear()
+            }.commit()
+        }
+    }
 
     /**
      * Return typed object from Json (hides TypeToken<T>(){}.getType()).
@@ -220,6 +250,10 @@ interface Subscriber<T> {
  * Can be used to observe shared preference changes as an alternative
  * to simply declaring a shared preference property using
  * "by Preference(...)".
+ *
+ * TODOx:
+ * I really don't like using this class because it requires way too
+ * much ceremony. Here is what it looks like using this class:
  *
  * <pre>{@code
  *   private val compositeUnsubscriber = CompositeUnsubscriber()
@@ -290,25 +324,51 @@ class ObservablePreference<T : Any>(default: T,
     }
 }
 
+/**
+ * Preference adapter class for Range<Int> required since
+ * PreferenceObserver can't automatically handle complex objects.
+ */
+open class EnumAdapter<T : Enum<T>>(enumType: Class<T>) : Adapter<T> {
+    private val enumConstants: Array<T> = enumType.enumConstants!!
+
+    override fun encode(value: T): String {
+        return value.ordinal.toString()
+    }
+
+    override fun decode(string: String): T? {
+        try {
+            return enumConstants[string.toInt()]
+        } catch (e: Exception) {
+            error("Preferences EnumAdapter decode failed (value=[$string]): $e")
+        }
+    }
+}
+
+/**
+ * Preference adapter class for Size values that saves all
+ * sizes in dp and restores those values in pixels. This
+ * allows defining default size values in dp units.
+ * ensures that size default values will remain the same
+ * PreferenceObserver can't automatically handle complex objects.
+ */
+
+/**
+ * Keeps tracks of a collection of unsubscribe handlers which
+ * are invoked when when this composite unsubscriber is invoked.
+ * Currently, this class is only used to remove shared preference
+ * listeners when an activity is being destroyed.
+ */
 class CompositeUnsubscriber {
-    private val destroyListeners: MutableCollection<() -> Unit> = mutableSetOf()
+    private val unsubscribers: MutableCollection<() -> Unit> = mutableSetOf()
     private var invoked = false
 
-    /**
-     * Add a new destroy listener to the group
-     * @param listener the destroy listener that is going to be added in the group
-     */
-    fun add(listener: () -> Unit) = destroyListeners.add(listener)
+    fun add(unsubscriber: () -> Unit) = unsubscribers.add(unsubscriber)
 
-    /**
-     * Invoke all destroy listeners
-     * **Note:** every group can be invoked **only once**.
-     */
     fun invoke() {
         if (invoked) {
             throw IllegalStateException("This group is already invoked once")
         }
-        destroyListeners.forEach { it.invoke() }
+        unsubscribers.forEach { it.invoke() }
         invoked = true
     }
 }

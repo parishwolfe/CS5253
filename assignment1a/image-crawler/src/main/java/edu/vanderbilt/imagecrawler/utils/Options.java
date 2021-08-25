@@ -21,18 +21,26 @@ public class Options {
      * Default: false.
      */
     public static boolean mDebug = false;
+
     /**
      * Starting point for the crawling.
      * <p>
      * Default: "http://www.dre.vanderbilt.edu/~schmidt/imgs".
      */
     public static String mRootUrl;
+
+    /**
+     * Transforms are performed locally or remotely using microservices.
+     */
+    public boolean mLocalTransforms;
+
     /**
      * The max depth for the crawler.
      * <p>
      * Default: 2.
      */
     public final int mMaxDepth;
+
     /**
      * Download directory name.
      */
@@ -43,6 +51,7 @@ public class Options {
         mRootUrl = builder.mRootUrl;
         mDownloadDirName = builder.mDownloadDirName;
         mDebug = builder.mDiagnosticsEnabled;
+        mLocalTransforms = builder.mLocalTransforms;
     }
 
     /**
@@ -72,6 +81,7 @@ public class Options {
         private String mRootUrl = DEFAULT_WEB_URL;
         private String mDownloadDirName = DEFAULT_DOWNLOAD_DIR_NAME;
         private boolean mDiagnosticsEnabled = false;
+        private boolean mLocalTransforms = true;
 
         private Builder() {
         }
@@ -100,6 +110,18 @@ public class Options {
             if (val != null && !val.isEmpty()) {
                 mRootUrl = val;
             }
+            return this;
+        }
+
+        /**
+         * Sets the {@code localTransforms} boolean and returns a reference to this Builder
+         * so that the methods can be chained together.
+         *
+         * @param val the {@code rootUrl} to set
+         * @return a reference to this Builder
+         */
+        public Builder localTransforms(boolean val) {
+            mLocalTransforms = val;
             return this;
         }
 

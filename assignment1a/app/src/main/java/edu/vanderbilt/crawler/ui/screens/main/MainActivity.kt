@@ -7,6 +7,8 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.view.*
 import android.widget.SeekBar
+import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.annotation.MainThread
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -14,7 +16,6 @@ import androidx.core.view.GravityCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -25,7 +26,9 @@ import edu.vanderbilt.crawler.R
 import edu.vanderbilt.crawler.adapters.ImageViewAdapter
 import edu.vanderbilt.crawler.adapters.MultiSelectAdapter
 import edu.vanderbilt.crawler.adapters.WebViewUrlAdapter
+import edu.vanderbilt.crawler.databinding.ActivityMainBinding
 import edu.vanderbilt.crawler.extensions.bottomSheetState
+import edu.vanderbilt.crawler.extensions.contentView
 import edu.vanderbilt.crawler.extensions.peekDrawer
 import edu.vanderbilt.crawler.extensions.postDelayed
 import edu.vanderbilt.crawler.platform.AndroidCache
@@ -34,6 +37,7 @@ import edu.vanderbilt.crawler.preferences.Preference
 import edu.vanderbilt.crawler.preferences.PreferenceProvider
 import edu.vanderbilt.crawler.ui.screens.pager.PagedActivityClient
 import edu.vanderbilt.crawler.ui.screens.settings.Settings
+import edu.vanderbilt.crawler.ui.screens.settings.Settings.localTransforms
 import edu.vanderbilt.crawler.ui.screens.webview.WebViewActivity
 import edu.vanderbilt.crawler.ui.views.ToolbarManager
 import edu.vanderbilt.crawler.utils.KtLogger
@@ -45,22 +49,14 @@ import edu.vanderbilt.imagecrawler.platform.Controller
 import edu.vanderbilt.imagecrawler.platform.Platform
 import edu.vanderbilt.imagecrawler.utils.Options
 import edu.vanderbilt.imagecrawler.utils.UriUtils
-import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.app_bar_main.*
-import kotlinx.android.synthetic.main.toolbar.*
-import org.jetbrains.anko.contentView
-import org.jetbrains.anko.find
-import org.jetbrains.anko.longToast
-import org.jetbrains.anko.toast
-import java.util.concurrent.TimeUnit
 
 class MainActivity :
-        AppCompatActivity(),
-        ToolbarManager,
-        MultiSelectAdapter.OnSelectionListener,
-        PagedActivityClient,
-        SharedPreferences.OnSharedPreferenceChangeListener,
-        KtLogger {
+    AppCompatActivity(),
+    ToolbarManager,
+    MultiSelectAdapter.OnSelectionListener,
+    PagedActivityClient,
+    SharedPreferences.OnSharedPreferenceChangeListener,
+    KtLogger {
 
     /**
      * Override PagedActivityClient.pagedActivityClient
@@ -98,24 +94,26 @@ class MainActivity :
                 UriUtils.mapUriToRelativePath(Options.DEFAULT_WEB_URL)
     }
 
-    override val toolbar by lazy { find<Toolbar>(R.id.toolbar) }
+    override val toolbar by lazy { findViewById<Toolbar>(R.id.toolbar) }
 
     private var resourceList: List<Resource> = mutableListOf()
     private var crawlProgress: MainViewModel.CrawlProgress =
-            MainViewModel.CrawlProgress(IDLE)
+        MainViewModel.CrawlProgress(IDLE)
     private var maxUrls = DEFAULT_MAX_URLS
     private var gridView = true
     private var threads = 0
     private var elapsedTime = -1L
     private var itemCount = 0
 
+    private lateinit var binding: ActivityMainBinding
+
     private var spanCount: Int
-        get() = (recyclerView.layoutManager as GridLayoutManager).spanCount
+        get() = (binding.content.recyclerView.layoutManager as GridLayoutManager).spanCount
         set(value) {
-            (recyclerView.layoutManager as GridLayoutManager).spanCount = value
+            (binding.content.recyclerView.layoutManager as GridLayoutManager).spanCount = value
         }
 
-    lateinit var viewModel: MainViewModel
+    val viewModel: MainViewModel by viewModels()
     private var selectionBundle: Bundle? = null
     private var showFab = true
     private var crawlCancelling: Boolean = false
@@ -132,14 +130,15 @@ class MainActivity :
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
         initToolbar()
         setSupportActionBar(toolbar)
 
         // Connect or reconnect to view model before calling setContent
         // which indirectly will cause the crawlSpeed ObservablePreference
         // callback has a reference to the lateinit viewModel.
-        viewModel = ViewModelProviders.of(this).get(MainViewModel::class.java)
 
         // Setup all contained views.
         initializeViews()
@@ -151,7 +150,7 @@ class MainActivity :
         updateTitle()
 
         // Hide FAB so that it can be animated into view.
-        progressFab.visibility = View.INVISIBLE
+        binding.content.progressFab.visibility = View.INVISIBLE
 
         // Only peek drawer when a session first starts.
         if (savedInstanceState == null) {
@@ -171,17 +170,19 @@ class MainActivity :
         // Start subscribing to live item.
         subscribeViewModel()
 
-        // Animate Fab into view if not already visible.
-        if (!progressFab.isVisible) {
-            postDelayed(1000L) {
-                showFab(true)
+        with(binding) {
+            // Animate Fab into view if not already visible.
+            if (!content.progressFab.isVisible) {
+                postDelayed(1000L) {
+                    showFab(true)
+                }
             }
-        }
 
-        if (peekDrawer && !drawerLayout.isDrawerOpen(GravityCompat.END)) {
-            postDelayed(500) {
-                drawerLayout.peekDrawer()
-                peekDrawer = false
+            if (peekDrawer && !drawerLayout.isDrawerOpen(GravityCompat.END)) {
+                postDelayed(500) {
+                    drawerLayout.peekDrawer()
+                    peekDrawer = false
+                }
             }
         }
     }
@@ -218,9 +219,9 @@ class MainActivity :
      */
     private fun subscribeViewModel() {
         viewModel.subscribe(
-                lifecycleOwner = this,
-                cacheObserver = Observer { it?.let(this::handleCacheEvent) },
-                crawlObserver = Observer { it?.let(this::handleProgressEvent) }) {
+            lifecycleOwner = this,
+            cacheObserver = Observer { it?.let(this::handleCacheEvent) },
+            crawlObserver = Observer { it?.let(this::handleProgressEvent) }) {
             if (selectionBundle != null) {
                 imageAdapter.restoreSelectionStates(selectionBundle)
             }
@@ -234,17 +235,22 @@ class MainActivity :
      * to ensure that the minimum amount of updating is performed.
      */
     private fun handleCacheEvent(items: List<Resource>) {
-        if (viewModel.state == CANCELLING || viewModel.state == CANCELLED) {
-            warn {
+        when (viewModel.state) {
+            CANCELLING -> warn {
                 "MainActivity: Ignoring cache events " +
-                        "received after crawl cancelled..."
+                        "received while crawl is cancelling."
             }
-            return
+            CANCELLED -> warn {
+                "MainActivity: Ignoring cache events " +
+                        "received after crawl has been cancelled."
+            }
+            else -> {
+                imageAdapter.updateItems(items)
+                showHintView(imageAdapter.itemCount == 0)
+                itemCount = imageAdapter.itemCount
+                updateTitle()
+            }
         }
-        imageAdapter.updateItems(items)
-        showHintView(imageAdapter.itemCount == 0)
-        itemCount = imageAdapter.itemCount
-        updateTitle()
     }
 
     /**
@@ -286,23 +292,25 @@ class MainActivity :
      * Helper that updates a composite title containing crawl run information.
      */
     private fun updateTitle() {
-        if (!isCrawlRunning()) {
-            crawlTracker.isGone = true
+        with(binding.content.crawlTracker) {
+            if (!isCrawlRunning()) {
+                root.isGone = true
 
-            var titleString = getString(R.string.app_name)
-            if (itemCount > 0) {
-                titleString += " - Images: $itemCount"
+                var titleString = getString(R.string.app_name)
+                if (itemCount > 0) {
+                    titleString += " - Images: $itemCount"
+                }
+                title = titleString
+            } else {
+                title = ""
+                root.isVisible = true
+                imagesValue.text = itemCount.toString()
+                threadsValue.text = threads.toString()
+
+                timeLabel.isVisible = true
+                timeValue.isVisible = true
+                strategyValue.text = Settings.crawlStrategy.toString()
             }
-            title = titleString
-        } else {
-            title = ""
-            crawlTracker.isVisible = true
-            imagesValue.text = itemCount.toString()
-            threadsValue.text = threads.toString()
-
-            timeLabel.isVisible = true
-            timeValue.isVisible = true
-            strategyValue.text = Settings.crawlStrategy.toString()
         }
     }
 
@@ -310,8 +318,10 @@ class MainActivity :
      * Helper that clears previously set title bar statistic views.
      */
     private fun clearTitleBar() {
-        timeValue.stop()
-        timeValue.base = SystemClock.elapsedRealtime()
+        with(binding.content.crawlTracker) {
+            timeValue.stop()
+            timeValue.base = SystemClock.elapsedRealtime()
+        }
         itemCount = 0
         threads = 0
         updateTitle()
@@ -325,47 +335,51 @@ class MainActivity :
         // 1. Search: when local crawl setting and a root url has not been chosen.
         // 2. Start: when local mode is true or a root url has been chosen.
         // 3. Stop: when the crawler is running.
-        actionFab.setOnClickListener {
-            when (crawlProgress.state) {
-                RUNNING -> {
-                    stopCrawl()
-                }
-                IDLE,
-                COMPLETED,
-                CANCELLED,
-                FAILED -> {
-                    if (Settings.localCrawl) {
-                        startCrawl()
-                    } else {
-                        showFab(false) {
-                            startUrlPicker(PickerType.URL_PICKER)
+        with(binding.content) {
+            actionFab.setOnClickListener {
+                when (crawlProgress.state) {
+                    RUNNING -> {
+                        stopCrawl()
+                    }
+                    IDLE,
+                    COMPLETED,
+                    CANCELLED,
+                    FAILED -> {
+                        if (Settings.localCrawl) {
+                            startCrawl()
+                        } else {
+                            showFab(false) {
+                                startUrlPicker(PickerType.URL_PICKER)
+                            }
+                        }
+                    }
+                    else -> {
+                        if (crawlCancelling) {
+                            Toast.makeText(
+                                this@MainActivity, "Waiting for the crawler to terminate ...",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
                 }
-                else -> {
-                    if (crawlCancelling) {
-                        toast("Waiting for the crawler to terminate ...")
-                    }
+
+                updateViewStates()
+            }
+
+            // Restore seek bar progress from shared preferences.
+            viewModel.crawlSpeed = Settings.crawlSpeed
+            speedSeekBar.progress = Settings.crawlSpeed
+
+            speedSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    seekBar?.let { Settings.crawlSpeed = it.progress; viewModel.crawlSpeed = it.progress }
                 }
-            }
 
-            updateViewStates()
-        }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
 
-        // Restore seek bar progress from shared preferences.
-        viewModel.crawlSpeed = Settings.crawlSpeed
-        speedSeekBar.progress = Settings.crawlSpeed
-
-        speedSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                seekBar?.let { Settings.crawlSpeed = it.progress; viewModel.crawlSpeed = it.progress }
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-
-        BottomSheetBehavior.from(speedBottomSheet).setBottomSheetCallback(
+            from(speedBottomSheet).addBottomSheetCallback(
                 object : BottomSheetBehavior.BottomSheetCallback() {
                     override fun onStateChanged(bottomSheet: View, newState: Int) {
                         when (newState) {
@@ -381,17 +395,19 @@ class MainActivity :
                     override fun onSlide(bottomSheet: View, slideOffset: Float) {}
                 })
 
-        // Restore bottomSheet visibility state from shared preferences.
-        speedBottomSheet.bottomSheetState = Settings.speedBarState
+            // Restore bottomSheet visibility state from shared preferences.
+            speedBottomSheet.bottomSheetState = Settings.speedBarState
 
-        imageAdapter = ImageViewAdapter(
-                context = this,
+            imageAdapter = ImageViewAdapter(
+                context = this@MainActivity,
                 list = resourceList.toMutableList(),
                 gridLayout = true,
-                onSelectionListener = this@MainActivity)
+                onSelectionListener = this@MainActivity
+            )
 
-        // Setup recycler view, layout, and imageAdapter.
-        recyclerView.initialize(imageAdapter)
+            // Setup recycler view, layout, and imageAdapter.
+            recyclerView.initialize(imageAdapter)
+        }
     }
 
     private fun RecyclerView.initialize(adapter: ImageViewAdapter) {
@@ -411,12 +427,12 @@ class MainActivity :
         // A gesture detector combined with an OnItemTouchListener is
         // the only way to detect long-clicks on recycler view background.
         val gestureDetector = GestureDetector(context,
-                object : GestureDetector.SimpleOnGestureListener() {
-                    override fun onLongPress(e: MotionEvent) {
-                        println("***************** showContextMenu called")
-                        showContextMenu(e.x, e.y)
-                    }
-                })
+            object : GestureDetector.SimpleOnGestureListener() {
+                override fun onLongPress(e: MotionEvent) {
+                    println("***************** showContextMenu called")
+                    showContextMenu(e.x, e.y)
+                }
+            })
 
         addOnItemTouchListener(object : RecyclerView.SimpleOnItemTouchListener() {
             override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
@@ -432,7 +448,7 @@ class MainActivity :
 
         addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                with(progressFab) {
+                with(binding.content.progressFab) {
                     //var behaviour: ProgressFab.Behavior = behaviour()
                     when (newState) {
                         RecyclerView.SCROLL_STATE_IDLE -> {
@@ -462,26 +478,24 @@ class MainActivity :
         when (type) {
             PickerType.URL_PICKER ->
                 WebViewActivity.startUrlPickerForResult(
-                        this,
-                        startUrl = if (Settings.localCrawl) localUrl else Settings.webUrl,
-                        pickUrls = null,
-                        imagePicker = false,
-                        maxUrls = maxUrls,
-                        resultCode = type.ordinal)
+                    this,
+                    startUrl = if (Settings.localCrawl) localUrl else Settings.webUrl,
+                    pickUrls = null,
+                    imagePicker = false,
+                    maxUrls = maxUrls,
+                    resultCode = type.ordinal
+                )
             PickerType.IMAGE_PICKER -> {
                 WebViewActivity.startUrlPickerForResult(
-                        this,
-                        startUrl = "https://www.google.ca/search?q=Dogs&newwindow" +
-                                "=1&source=lnms&tbm=isch&sa=X&ved=0ahUKEwjFzvip0" +
-                                "_7WAhUm6oMKHZyvBMoQ_AUICygC&biw=1292&bih=780",
-                        pickUrls = null,
-                        imagePicker = true,
-                        maxUrls = 10,
-                        resultCode = type.ordinal)
-                contentView?.postDelayed(2000) {
-                    longToast("Doug: You puppys right? Long-click on a puppy then! " +
-                            "Pull up the bottom sheet and delete items too!")
-                }
+                    this,
+                    startUrl = "https://www.google.ca/search?q=Dogs&newwindow" +
+                            "=1&source=lnms&tbm=isch&sa=X&ved=0ahUKEwjFzvip0" +
+                            "_7WAhUm6oMKHZyvBMoQ_AUICygC&biw=1292&bih=780",
+                    pickUrls = null,
+                    imagePicker = true,
+                    maxUrls = 10,
+                    resultCode = type.ordinal
+                )
             }
 
         }
@@ -492,14 +506,19 @@ class MainActivity :
      */
     fun startCrawl() {
         if (!Settings.localCrawl && Settings.webUrl.isBlank()) {
-            toast("Please click the search button to pick a root URL to crawl.")
+            Toast.makeText(
+                this, "Please click the search button to pick a root URL to crawl.",
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
 
         // Restore normal crawl imageAdapter if image picker demo imageAdapter
         // was being used.
-        if (recyclerView.adapter !is ImageViewAdapter) {
-            recyclerView.adapter = imageAdapter
+        with(binding.content.recyclerView) {
+            if (adapter !is ImageViewAdapter) {
+                adapter = imageAdapter
+            }
         }
 
         // For local crawl, set the root url to the root web-pages
@@ -516,13 +535,14 @@ class MainActivity :
 
         // Build controller that is passed to the image-crawler library.
         val controller = Controller
-                .newBuilder()
-                .platform(AndroidPlatform)
-                .transforms(Settings.transformTypes.filterNotNull())
-                .rootUrl(rootUrl)
-                .maxDepth(Settings.crawlDepth)
-                .diagnosticsEnabled(false)
-                .build()
+            .newBuilder()
+            .platform(AndroidPlatform)
+            .transforms(Settings.transformTypes.filterNotNull())
+            .rootUrl(rootUrl)
+            .localTransforms(localTransforms)
+            .maxDepth(Settings.crawlDepth)
+            .diagnosticsEnabled(false)
+            .build()
 
         // Cancel possibly set cancel flag from a previous crawl.
         crawlCancelling = false
@@ -586,10 +606,10 @@ class MainActivity :
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.action_delete)?.isEnabled =
-                imageAdapter.selectedCount > 0
+            imageAdapter.selectedCount > 0
 
         menu.findItem(R.id.action_select_all)?.isEnabled =
-                imageAdapter.selectedCount < imageAdapter.itemCount
+            imageAdapter.selectedCount < imageAdapter.itemCount
 
         return super.onPrepareOptionsMenu(menu)
     }
@@ -598,8 +618,10 @@ class MainActivity :
      * Creates a context menu whose entries depend on whether action
      * mode is enabled or not and the current item selection state.
      */
-    override fun onCreateContextMenu(menu: ContextMenu, v: View?,
-                                     menuInfo: ContextMenu.ContextMenuInfo?) {
+    override fun onCreateContextMenu(
+        menu: ContextMenu, v: View?,
+        menuInfo: ContextMenu.ContextMenuInfo?
+    ) {
         if (imageAdapter.actionMode != null) {
             menuInflater.inflate(R.menu.menu_action_mode, menu)
             if (imageAdapter.selectedCount == imageAdapter.itemCount) {
@@ -621,57 +643,56 @@ class MainActivity :
      * Delegates options menu commands to generic action helper or super class.
      */
     override fun onOptionsItemSelected(item: MenuItem) =
-            performAction(item.itemId) or super.onOptionsItemSelected(item)
+        performAction(item.itemId) or super.onOptionsItemSelected(item)
 
     /**
      * Delegates context menu commands to generic action helper or super class.
      */
     override fun onContextItemSelected(item: MenuItem) =
-            performAction(item.itemId) or super.onContextItemSelected(item)
+        performAction(item.itemId) or super.onContextItemSelected(item)
 
     /**
      * Helper that executes all supported action commands for all menu types.
      */
-    private fun performAction(actionId: Int) =
-            when (actionId) {
-                R.id.actionSettings -> {
-                    if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
-                        drawerLayout.closeDrawer(GravityCompat.END)
-                    } else {
-                        drawerLayout.openDrawer(GravityCompat.END)
-                    }
-                    //SettingsDialogFragment.newInstance().show(supportFragmentManager, "dialog")
-                    true
+    private fun performAction(actionId: Int) = with(binding) {
+        when (actionId) {
+            R.id.actionSettings -> {
+                if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
+                    drawerLayout.closeDrawer(GravityCompat.END)
+                } else {
+                    drawerLayout.openDrawer(GravityCompat.END)
                 }
-                R.id.action_select_all -> {
-                    with(recyclerView.adapter as ImageViewAdapter) {
-                        startActionModeAndSelectAll()
-                    }
-                    true
-                }
-                R.id.action_clear -> {
-                    imageAdapter.items.forEach {
-                        AndroidPlatform.cache.remove(it.url)
-                    }
-                    true
-                }
-                R.id.action_delete -> {
-                    imageAdapter.selectedItems.forEach {
-                        AndroidPlatform.cache.remove(it.url)
-                    }
-                    true
-                }
-                else -> false
+                //SettingsDialogFragment.newInstance().show(supportFragmentManager, "dialog")
+                true
             }
+            R.id.action_select_all -> {
+                with(content.recyclerView.adapter as ImageViewAdapter) {
+                    startActionModeAndSelectAll()
+                }
+                true
+            }
+            R.id.action_clear -> {
+                viewModel.clearAll()
+                true
+            }
+            R.id.action_delete -> {
+                viewModel.delete(imageAdapter.selectedItems)
+                true
+            }
+            else -> false
+        }
+    }
 
     /**
      * Catch back press and if the settings panel is visible, close the panel.
      */
     override fun onBackPressed() {
-        if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
-            drawerLayout.closeDrawer(GravityCompat.END)
-        } else {
-            super.onBackPressed()
+        with(binding.drawerLayout) {
+            if (isDrawerOpen(GravityCompat.END)) {
+                closeDrawer(GravityCompat.END)
+            } else {
+                super.onBackPressed()
+            }
         }
     }
 
@@ -680,43 +701,46 @@ class MainActivity :
      * and the current crawl state.
      */
     private fun updateViewStates() {
-        when (crawlProgress.state) {
-            RUNNING -> {
-                progressBar.isVisible = true
-                actionFab.setImageResource(R.drawable.ic_close_white_48dp)
-                timeValue.start()
-            }
-            CANCELLING -> {
-                timeValue.stop()
-                actionFab.setImageResource(R.drawable.ic_hourglass_empty_white_48dp)
-            }
-            IDLE,
-            COMPLETED,
-            CANCELLED,
-            FAILED -> {
-                timeValue.stop()
-                progressBar.isVisible = false
-                if (Settings.localCrawl) {
-                    actionFab.setImageResource(R.drawable.ic_file_download_white_48dp)
-                } else {
-                    actionFab.setImageResource(R.drawable.ic_search_white_48dp)
+        with(binding.content) {
+            when (crawlProgress.state) {
+                RUNNING -> {
+                    progressBar.isVisible = true
+                    actionFab.setImageResource(R.drawable.ic_close_white_48dp)
+                    crawlTracker.timeValue.start()
+//                    (binding.settingsFragment as SettingsDialogFragment).crawlerRunning(true)
                 }
-                // This is only necessary to call if DiffUtils is being used
-                // to make UI updates more efficient. Doing so prevents the
-                // view from doing layouts when toggling state, size, thread,
-                // and progress widgets so a final layout used to be forced
-                // here so that when the crawl finished and all the transient
-                // widgets were set to "gone" the layout would reduce each
-                // row size to reflect the gone states. Now that DiffUtils
-                // always returns false for content being the same, a new
-                // layout for each item is performed on every state update
-                // sent by the crawler and the grid items properly resize
-                // during the crawl.
-                // imageAdapter.notifyDataSetChanged()
+                CANCELLING -> {
+                    crawlTracker.timeValue.stop()
+                    actionFab.setImageResource(R.drawable.ic_hourglass_empty_white_48dp)
+                }
+                IDLE,
+                COMPLETED,
+                CANCELLED,
+                FAILED -> {
+                    crawlTracker.timeValue.stop()
+                    progressBar.isVisible = false
+                    if (Settings.localCrawl) {
+                        actionFab.setImageResource(R.drawable.ic_file_download_white_48dp)
+                    } else {
+                        actionFab.setImageResource(R.drawable.ic_search_white_48dp)
+                    }
+                    // This is only necessary to call if DiffUtils is being used
+                    // to make UI updates more efficient. Doing so prevents the
+                    // view from doing layouts when toggling state, size, thread,
+                    // and progress widgets so a final layout used to be forced
+                    // here so that when the crawl finished and all the transient
+                    // widgets were set to "gone" the layout would reduce each
+                    // row size to reflect the gone states. Now that DiffUtils
+                    // always returns false for content being the same, a new
+                    // layout for each item is performed on every state update
+                    // sent by the crawler and the grid items properly resize
+                    // during the crawl.
+                    // imageAdapter.notifyDataSetChanged()
+                }
             }
         }
 
-        showHintView(imageAdapter.itemCount == 0 && crawlProgress.state == RUNNING)
+        showHintView(imageAdapter.itemCount == 0 && crawlProgress.state != RUNNING)
     }
 
     /**
@@ -724,9 +748,18 @@ class MainActivity :
      */
     private fun showHintView(show: Boolean) {
         postDelayed(200) {
-            if (!show || imageAdapter.itemCount == 0) {
-                mainActivityHintView.isVisible = show
-                recyclerView.isGone = show
+            with(binding.content) {
+                if (show) {
+                    mainActivityHintView.text = if (Settings.localCrawl) {
+                        getString(R.string.main_activity_download_hint)
+                    } else {
+                        getString(R.string.main_activity_search_hint)
+                    }
+                }
+                if (!show || imageAdapter.itemCount == 0) {
+                    mainActivityHintView.isVisible = show
+                    recyclerView.isGone = show
+                }
             }
         }
     }
@@ -735,12 +768,14 @@ class MainActivity :
      * Helper method to force showing or hiding the FAB.
      */
     private fun showFab(show: Boolean, run: (() -> Unit)? = null) {
-        if (show != progressFab.isShown) {
-            showFab = show
-            if (showFab) {
-                progressFab.show(run)
-            } else {
-                progressFab.hide(run)
+        with(binding.content) {
+            if (show != progressFab.isShown) {
+                showFab = show
+                if (showFab) {
+                    progressFab.show(run)
+                } else {
+                    progressFab.hide(run)
+                }
             }
         }
     }
@@ -751,22 +786,24 @@ class MainActivity :
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (resultCode == RESULT_OK) {
             data?.let {
-                when (PickerType.values()[requestCode]) {
-                    PickerType.URL_PICKER -> {
+                when (MainActivity.Companion.PickerType.values()[requestCode]) {
+                    MainActivity.Companion.PickerType.URL_PICKER -> {
                         Settings.webUrl = it.getStringExtra(WebViewActivity.KEY_URL)!!
                         startCrawl()
                     }
-                    PickerType.IMAGE_PICKER -> {
+                    MainActivity.Companion.PickerType.IMAGE_PICKER -> {
                         val urls = it.getStringArrayListExtra(WebViewActivity.KEY_PICK_URLS)
-                        recyclerView.adapter = WebViewUrlAdapter(
-                                this, urls!!, true,
+                        with(binding.content.recyclerView) {
+                            adapter = WebViewUrlAdapter(
+                                this@MainActivity, urls!!, true,
                                 object : MultiSelectAdapter.OnSelectionListener {
                                     override fun onActionModeFinished() {
-                                        if (recyclerView.adapter?.itemCount == 0) {
+                                        if (adapter?.itemCount == 0) {
                                             updateViewStates()
                                         }
                                     }
                                 })
+                        }
                     }
                 }
             }
@@ -795,7 +832,10 @@ class MainActivity :
         return if (!isCrawlRunning()) {
             true
         } else {
-            toast("Item selection is disabled while a crawl is running.")
+            Toast.makeText(
+                this, "Item selection is disabled while a crawl is running.",
+                Toast.LENGTH_SHORT
+            ).show()
             false
         }
     }
@@ -805,7 +845,7 @@ class MainActivity :
      * mode has been successfully started.
      */
     override fun onActionModeStarted() {
-        actionFab.hide()
+        binding.content.actionFab.hide()
     }
 
     /**
@@ -813,7 +853,7 @@ class MainActivity :
      * mode has finished.
      */
     override fun onActionModeFinished() {
-        actionFab.show()
+        binding.content.actionFab.show()
     }
 
     /**
@@ -858,26 +898,28 @@ class MainActivity :
      * React to shared preference (Settings) changes.
      */
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String) {
-        when (key) {
-            Settings.CRAWL_SPEED_PREF -> {
-                speedSeekBar?.progress = Settings.crawlSpeed
-                viewModel.crawlSpeed = Settings.crawlSpeed
-            }
-            Settings.SPEED_BAR_STATE_PREF -> {
-                speedBottomSheet?.bottomSheetState = Settings.speedBarState
-            }
-            Settings.GRID_SCALE_PREF -> {
-                AndroidCache.clearDownloaderCache()
-                recyclerView.initialize(imageAdapter)
-            }
-            Settings.SHOW_PROGRESS_PREF,
-            Settings.SHOW_STATE_PREF,
-            Settings.SHOW_SIZE_PREF,
-            Settings.SHOW_THREAD_PREF -> {
-                imageAdapter.notifyDataSetChanged()
-            }
-            Settings.LOCAL_CRAWL_PREF -> {
-                updateViewStates()
+        with(binding.content) {
+            when (key) {
+                Settings.CRAWL_SPEED_PREF -> {
+                    speedSeekBar.progress = Settings.crawlSpeed
+                    viewModel.crawlSpeed = Settings.crawlSpeed
+                }
+                Settings.SPEED_BAR_STATE_PREF -> {
+                    speedBottomSheet.bottomSheetState = Settings.speedBarState
+                }
+                Settings.GRID_SCALE_PREF -> {
+                    AndroidCache.clearDownloaderCache()
+                    recyclerView.initialize(imageAdapter)
+                }
+                Settings.SHOW_PROGRESS_PREF,
+                Settings.SHOW_STATE_PREF,
+                Settings.SHOW_SIZE_PREF,
+                Settings.SHOW_THREAD_PREF -> {
+                    imageAdapter.notifyDataSetChanged()
+                }
+                Settings.LOCAL_CRAWL_PREF -> {
+                    updateViewStates()
+                }
             }
         }
     }

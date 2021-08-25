@@ -12,6 +12,11 @@ import edu.vanderbilt.imagecrawler.utils.UriUtils;
 public class JavaPlatform implements Platform {
 
     /**
+     * Emulator url used to access locally running image filter server.
+     */
+    public static final String BASE_URL = "http://localhost:8081";
+
+    /**
      * Creates a new Java platform bitmap.
      *
      * @param inputStream Image bytes.
@@ -71,5 +76,10 @@ public class JavaPlatform implements Platform {
         } else {
             System.out.println("DIAGNOSTICS:" + msg);
         }
+    }
+
+    @Override
+    public String getBaseUrl() {
+        return BASE_URL;
     }
 }

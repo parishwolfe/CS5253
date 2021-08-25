@@ -1,11 +1,11 @@
 package edu.vanderbilt.crawler.adapters
 
 import android.view.ViewGroup
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import edu.vanderbilt.crawler.R
-import org.jetbrains.anko.matchParent
-import org.jetbrains.anko.wrapContent
 
 /**
  * Created by monte on 2017-09-04.
@@ -21,7 +21,7 @@ class Adapter(val list: MutableList<String> = mutableListOf()) : RecyclerView.Ad
             background = context.obtainStyledAttributes(
                     arrayOf(R.attr.selectableItemBackground).toIntArray()).getDrawable(0)
             isClickable = true
-            layoutParams = ViewGroup.LayoutParams(matchParent, wrapContent)
+            layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
         })
     }
 
@@ -33,17 +33,17 @@ class Adapter(val list: MutableList<String> = mutableListOf()) : RecyclerView.Ad
         return list.size
     }
 
-    public fun push(text: String) {
+    fun push(text: String) {
         list.add(0, text)
         notifyItemInserted(0)
     }
 
-    public fun pop() {
+    fun pop() {
         list.removeAt(list.count())
         notifyItemRemoved(list.count())
     }
 
-    public fun add(text: String) {
+    fun add(text: String) {
         list += text
         notifyItemInserted(list.count())
     }

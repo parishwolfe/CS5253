@@ -13,13 +13,12 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import edu.vanderbilt.crawler.R
 import edu.vanderbilt.crawler.adapters.MultiSelectAdapter
 import edu.vanderbilt.crawler.adapters.WebViewUrlAdapter
+import edu.vanderbilt.crawler.databinding.WebviewUrlListBinding
 import edu.vanderbilt.crawler.extensions.bottomSheetState
 import edu.vanderbilt.crawler.extensions.peekBottomSheet
 import edu.vanderbilt.crawler.extensions.postDelayed
 import edu.vanderbilt.crawler.extensions.setViewHeight
 import edu.vanderbilt.crawler.utils.KtLogger
-import kotlinx.android.synthetic.main.activity_web_view.*
-import org.jetbrains.anko.dimen
 
 /**
  * Supports a maximum length item list using push and pop operations to keep
@@ -32,16 +31,20 @@ class WebViewUrlFragment : Fragment(), MultiSelectAdapter.OnSelectionListener, K
     }
 
     /** Initialized in onCreateVew() */
-    private lateinit var view: RecyclerView
+    private lateinit var recyclerView: RecyclerView
 
     /** Set internal to allow controlling activity to access adapter. */
-    internal val adapter: WebViewUrlAdapter by lazy { view.adapter as WebViewUrlAdapter }
+    internal val adapter by lazy {
+        recyclerView.adapter as WebViewUrlAdapter
+    }
 
-    private val imagePicker
-        get() = (activity as WebViewActivity).imagePicker
+    private val imagePicker by lazy {
+        (activity as WebViewActivity).imagePicker
+    }
 
-    private val bottomSheet
-        get() = (activity as WebViewActivity).bottomSheet
+    private val bottomSheet by lazy {
+        (activity as WebViewActivity).binding.bottomSheet
+    }
 
     /**
      * Immutable URL list displayed by the adapter.
@@ -49,20 +52,22 @@ class WebViewUrlFragment : Fragment(), MultiSelectAdapter.OnSelectionListener, K
     val urls: List<String>
         get() = adapter.items.toList()
 
+    private lateinit var binding: WebviewUrlListBinding
+
     override fun onCreateView(inflater: LayoutInflater,
                               container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
-        view = inflater.inflate(R.layout.webview_url_list, container, false) as RecyclerView
+                              savedInstanceState: Bundle?): View {
+        binding = WebviewUrlListBinding.inflate(inflater, container, false)
+        recyclerView = binding.root
 
-        with(view) {
+        with(recyclerView) {
             adapter = WebViewUrlAdapter(context, mutableListOf(), imagePicker)
 
             // Custom layout manager to ensure that the activity bottom
             // sheet peek height adjust to the height of the first list item.
             // Note that this only works if the activity has a bottom sheet
             // with id "bottomSheet".
-            layoutManager = object : LinearLayoutManager(
-                    context, LinearLayoutManager.VERTICAL, false) {
+            layoutManager = object : LinearLayoutManager(context, VERTICAL, false) {
                 override fun onLayoutCompleted(state: RecyclerView.State?) {
                     super.onLayoutCompleted(state)
                     val pos: Int = findFirstVisibleItemPosition()
@@ -75,9 +80,9 @@ class WebViewUrlFragment : Fragment(), MultiSelectAdapter.OnSelectionListener, K
                     val lastPos = findLastVisibleItemPosition()
                     if (pos >= 0) {
                         if ((lastPos - pos) + 1 < 5) {
-                            view.setViewHeight(LinearLayout.LayoutParams.WRAP_CONTENT)
+                            recyclerView.setViewHeight(LinearLayout.LayoutParams.WRAP_CONTENT)
                         } else {
-                            view.setViewHeight(dimen((R.dimen.web_view_list_height)))
+                            recyclerView.setViewHeight(resources.getDimensionPixelSize((R.dimen.web_view_list_height)))
                         }
                     }
 
@@ -93,7 +98,14 @@ class WebViewUrlFragment : Fragment(), MultiSelectAdapter.OnSelectionListener, K
             addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
         }
 
-        return view
+        return recyclerView
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        with(activity as WebViewActivity) {
+            initializeSearchView(this.binding.searchView)
+        }
     }
 
     /**
@@ -102,7 +114,7 @@ class WebViewUrlFragment : Fragment(), MultiSelectAdapter.OnSelectionListener, K
      */
     private fun peekBottomSheet() {
         if (bottomSheet.bottomSheetState == BottomSheetBehavior.STATE_HIDDEN) {
-            view.postDelayed(500) {
+            recyclerView.postDelayed(500) {
                 bottomSheet.peekBottomSheet()
             }
         }
@@ -121,6 +133,6 @@ class WebViewUrlFragment : Fragment(), MultiSelectAdapter.OnSelectionListener, K
 
         adapter.push(url)
 
-        view.layoutManager!!.scrollToPosition(0)
+        recyclerView.layoutManager!!.scrollToPosition(0)
     }
 }

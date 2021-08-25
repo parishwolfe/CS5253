@@ -31,4 +31,9 @@ public interface PlatformImage {
 	 * @return Number of image bytes.
 	 */
 	int size();
+
+	/**
+	 * Returns the cached item associated with this image.
+	 */
+	Cache.Item getCacheItem();
 }

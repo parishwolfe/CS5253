@@ -9,7 +9,6 @@ import android.widget.TextView
 import edu.vanderbilt.crawler.R
 import edu.vanderbilt.crawler.extensions.asyncLoad
 import edu.vanderbilt.crawler.extensions.getResourceUri
-import org.jetbrains.anko.find
 
 /**
  * Adapter that displays an image URL and its associated image.
@@ -17,7 +16,7 @@ import org.jetbrains.anko.find
 class WebViewUrlAdapter(context: Context,
                         items: MutableList<String> = mutableListOf(),
                         val imagePicker: Boolean = true,
-                        selectionListener: MultiSelectAdapter.OnSelectionListener? = null)
+                        selectionListener: OnSelectionListener? = null)
     : MultiSelectAdapter<String, WebViewUrlAdapter.Holder>(
         context, items, selectionListener) {
 
@@ -33,18 +32,19 @@ class WebViewUrlAdapter(context: Context,
     }
 
     inner class Holder(val view: View) : SelectableViewHolder(view) {
-        private val textView = view.find<TextView>(R.id.textView)
-        private val imageView = view.find<ImageView>(R.id.imageView)
+        private val textView = view.findViewById<TextView>(R.id.textView)
+        private val imageView = view.findViewById<ImageView>(R.id.imageView)
 
         fun bind(url: String) {
             textView.text = url
             // Image picker shows the image, while url picker only shows
             // a default image (globe).
             imageView.asyncLoad(
-                    if (imagePicker)
+                    if (imagePicker) {
                         url
-                    else
-                        view.context.getResourceUri(R.drawable.globe).toString())
+                    } else {
+                        view.context.getResourceUri(R.drawable.globe).toString()
+                    })
         }
 
         override fun toString(): String {

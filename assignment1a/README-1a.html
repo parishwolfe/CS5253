@@ -46,11 +46,11 @@
   <ul>
     <li>
       Download and install Android Studio. Instructions for
-      doing this are available <a href="https://github.com/douglascraigschmidt/CS5253/wiki/Installing-Software">here</a>.
+      doing this are available <a href="https://github.com/douglascraigschmidt/CS253/wiki/Installing-Software">here</a>.
     </li>
 
-    <li> 
-      Setup an account on <a href="https://about.gitlab.com/">GitLab</a>, which is also explained <a href="https://github.com/douglascraigschmidt/CS5253/wiki/Installing-Software">here</a>.
+    <li>
+      Setup an account on <a href="https://about.gitlab.com/">GitLab</a>, which is also explained <a href="https://github.com/douglascraigschmidt/CS253/wiki/Installing-Software">here</a>.
     </li>
   </ul>
 
@@ -70,14 +70,16 @@ which contains the skeleton(s) you'll need to fill in, as
   described <A HREF="#description">below</A>.
 </LI>
 
-<LI style="margin-bottom:1em"> <A HREF="image-crawler/src/test">image-crawler/src/test</A>, which is a set of JUnit
-tests that exercise the features under test and can be used to
-evaluate whether you've correctly satisfied this assignment's requirements.
-</LI>
+<LI style="margin-bottom:1em"> <A
+HREF="image-crawler/src/test">image-crawler/src/test</A>, which is a
+set of unit tests that exercise the features you're implementing and
+are used to evaluate whether you've correctly satisfied this
+assignment's requirements.  </LI>
 
-<LI style="margin-bottom:1em"><A HREF="app/src/androidTest/java/assignmentTests">app/src/androidTest/java/assignmentTests</A>, which is
-an Android Studio instrumentation test that runs your app automatically.
-</LI>
+<LI style="margin-bottom:1em"><A
+HREF="app/src/androidTest/java/assignmentTests">app/src/androidTest/java/assignmentTests</A>,
+which is an Android Studio instrumentation test that runs your app
+automatically.
 
 </UL>
 
@@ -118,9 +120,9 @@ You'll need to complete the "TODO" tasks in various methods to
 implement the Array interface.
 
 <LI style="margin-bottom:1em"><A
-HREF="app/src/main/java/edu/vandy/simulator/utils/Assignment.java">Assignment.java</A>.
-You'll need to complete the "TODO" to set the <CODE>sTypes</CODE>
-field to either <CODE>GRADUATE</CODE> or <CODE>UNDERGRADUATE</CODE>,
+HREF="app/src/main/java/edu/vandy/simulator/utils/Student.kt">Student.kt</A>.
+You'll need to complete the "TODO" to set the <CODE>type</CODE> set field
+to include just <CODE>Graduate</CODE> or <CODE>Undergraduate</CODE>,
 depending on which version of the assignment that you're
 implementing.</LI>
 
@@ -142,8 +144,8 @@ implementing.</LI>
   <hr width=50% align=left> <h4>Skeleton Code</h4>
 
   <p> Skeleton code for this assignment is available <a
-    href="https://github.com/douglascraigschmidt/CS5253/tree/master/assignments/assignment1a/">here</a>
-    in my GitHub account.  After you've setup your <a
+    href="https://github.com/douglascraigschmidt/CS253/tree/master/assignments/assignment1a/">here</a>
+    in my GitHub repository.  After you've setup your <a
     href="https://about.gitlab.com/">GitLab</a> account you can pull
     this skeleton code in your repository, read it carefully, and
     complete the "TODO" markers.  The additional work required by
@@ -151,16 +153,17 @@ implementing.</LI>
 
   <hr width=50% align=left> <h4>Unit Tests</h4>
 
-  <p> JUnit unit tests in the
-  <code>image-crawler/src/test/java</code>
+  <p> Unit tests in the <code>image-crawler/src/test/java</code>
   folder are provided to increase our confidence that your
-  implementation is working as expected.  You'll need to learn how to
-  use the Android Studio GUI to run the JUnit test locally on your
+  implementation is working as expected.  It's essential that you use
+  the Android Studio GUI to run these unit tests locally on your
   computer, as described <A
   HREF="https://developer.android.com/training/testing/unit-testing/local-unit-tests.html#run">here</a>.
   As usual, testing only demonstrates the presence of bugs, not their
-  absence, so don't rely solely on the JUnit tests to detect problems
-  in your code. </p>
+  absence, so don't rely solely on the unit tests to detect problems
+  in your code.  However, make sure to run these tests prior to
+  submitting your solution and seek help if you have questions about
+  why any of the tests fail.  </p>
 
   <hr width=50% align=left> <h4>Concluding Remarks</h4> <p>
 

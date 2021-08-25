@@ -11,7 +11,6 @@ import edu.vanderbilt.imagecrawler.platform.Cache.Operation.TRANSFORM
 import edu.vanderbilt.imagecrawler.platform.PlatformImage
 import edu.vanderbilt.imagecrawler.transforms.Transform
 import edu.vanderbilt.imagecrawler.utils.Filters
-import org.jetbrains.anko.dimen
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -23,7 +22,7 @@ import java.io.OutputStream
 class AndroidImage : PlatformImage, KtLogger {
     companion object {
         /** Dimensions representing how large the scaled image should be. */
-        private val IMAGE_WIDTH = App.instance.dimen(R.dimen.url_grid_image_size)
+        private val IMAGE_WIDTH = App.instance.resources.getDimension(R.dimen.url_grid_image_size).toInt()
         private val IMAGE_HEIGHT = IMAGE_WIDTH
 
     }
@@ -45,8 +44,7 @@ class AndroidImage : PlatformImage, KtLogger {
     override fun setImage(inputStream: InputStream, item: Item) {
         this.item = item
         size = inputStream.available()
-        image = BitmapUtils.decodeSampledBitmapFromStream(
-                inputStream, IMAGE_WIDTH, IMAGE_HEIGHT)
+        image = BitmapUtils.decodeSampledBitmapFromStream(inputStream, IMAGE_WIDTH, IMAGE_HEIGHT)
         size = image?.byteCount ?: 0
     }
 
@@ -54,6 +52,11 @@ class AndroidImage : PlatformImage, KtLogger {
      * Returns size of image.
      */
     override fun size(): Int = size
+
+    /**
+     * Returns the associated cache item.
+     */
+    override fun getCacheItem(): Item  = item
 
     /**
      * Write the image to the [outputStream].

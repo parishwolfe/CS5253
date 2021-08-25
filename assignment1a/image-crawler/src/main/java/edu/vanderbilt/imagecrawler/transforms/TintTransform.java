@@ -4,10 +4,10 @@ import edu.vanderbilt.imagecrawler.platform.Cache;
 import edu.vanderbilt.imagecrawler.utils.Image;
 
 /**
- * A Transform subclass that converts a downloaded image using a redish tint.
- * It plays the role of the "Concrete Component" in the
- * Decorator pattern and the "Concrete Class" in the Template
- * Method pattern.
+ * A Transform subclass that converts a downloaded image using a
+ * redish tint.  It plays the role of the "Concrete Component" in the
+ * Decorator pattern and the "Concrete Class" in the Template Method
+ * pattern.
  */
 public class TintTransform
         extends Transform {

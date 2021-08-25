@@ -3,6 +3,7 @@ package edu.vanderbilt.imagecrawler.crawlers;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -19,15 +20,18 @@ import edu.vanderbilt.imagecrawler.platform.Cache;
 import edu.vanderbilt.imagecrawler.platform.Controller;
 import edu.vanderbilt.imagecrawler.platform.PlatformImage;
 import edu.vanderbilt.imagecrawler.transforms.Transform;
-import edu.vanderbilt.imagecrawler.transforms.TransformDecoratorWithImage;
+import edu.vanderbilt.imagecrawler.transforms.TransformImageDecorator;
 import edu.vanderbilt.imagecrawler.utils.Array;
 import edu.vanderbilt.imagecrawler.utils.BlockingTask;
 import edu.vanderbilt.imagecrawler.utils.ConcurrentHashSet;
 import edu.vanderbilt.imagecrawler.utils.Crawler;
 import edu.vanderbilt.imagecrawler.utils.ExceptionUtils;
 import edu.vanderbilt.imagecrawler.utils.Image;
+import edu.vanderbilt.imagecrawler.utils.Options;
 import edu.vanderbilt.imagecrawler.utils.UnsynchronizedArray;
 import edu.vanderbilt.imagecrawler.utils.WebPageCrawler;
+import edu.vanderbilt.imagecrawler.web.RemoteDataSource;
+import edu.vanderbilt.imagecrawler.web.TransformedImage;
 
 /**
  * This abstract class factors out methods and fields that are common
@@ -44,6 +48,12 @@ public abstract class ImageCrawler
      * The List of transforms to applyTransform to the images.
      */
     protected List<Transform> mTransforms;
+
+    /**
+     * Flag used to run transforms locally or remotely using
+     * microservices.
+     */
+    protected boolean mLocalTransforms;
 
     /**
      * A cache of unique URIs that have already been processed.
@@ -83,21 +93,27 @@ public abstract class ImageCrawler
      */
 
     private Function<String, InputStream> mMapUriToInputStream;
+
     /**
      * Keeps track of how long a given test has run and is also
      * used to check if the crawler is currently running.
      */
-
     private long mStartTime;
+
     /**
      * Keeps track of all the execution times.
      */
-
     private List<Long> mExecutionTimes = new ArrayList<>();
+
     /**
      * Controller instance saved for calling log method.
      */
-    private Controller mController;
+    protected Controller mController;
+
+    /**
+     * Used for performing remote transforms using microservices.
+     */
+    private RemoteDataSource mRemoteDataSource;
 
     /**
      * Constructor that is only available to inner Factory class to
@@ -111,6 +127,15 @@ public abstract class ImageCrawler
      */
     private static boolean isCancelled() {
         return mCancelled;
+    }
+
+    /**
+     * @return {@code true} if transformations should be performed locally,
+     * {@code false} if transformations should be performed using remote
+     * microservices.
+     */
+    private boolean getLocalTransforms() {
+        return mController.mOptions.mLocalTransforms;
     }
 
     /**
@@ -141,7 +166,7 @@ public abstract class ImageCrawler
         mTransforms = controller.mTransforms;
 
         // Store the root Uri provided by the controller.
-        mRootUri = controller.mOptions.mRootUrl;
+        mRootUri = Options.mRootUrl;
 
         // The maximum depth for this crawl.
         mMaxDepth = controller.mOptions.mMaxDepth;
@@ -153,8 +178,7 @@ public abstract class ImageCrawler
         // Setup a new WebPageCrawler passing it the platform
         // dependant url to input stream mapping function (used for
         // access local web pages in app resources or assets).
-        mWebPageCrawler =
-                new WebPageCrawler(controller::mapUriToInputStream);
+        mWebPageCrawler = new WebPageCrawler(controller::mapUriToInputStream);
 
         // Use the cache implementation provided by the application's
         // controller.
@@ -165,6 +189,17 @@ public abstract class ImageCrawler
 
         // Save controller for calling log method.
         mController = controller;
+
+        // Flag determining if local or remote transforms
+        // should be run.
+        mLocalTransforms = controller.mOptions.mLocalTransforms;
+
+        // Only create remote data source if remote transforms
+        // are enabled.
+        if (!mLocalTransforms) {
+            mRemoteDataSource =
+                    new RemoteDataSource(mController.mPlatform.getBaseUrl());
+        }
     }
 
     /**
@@ -277,8 +312,7 @@ public abstract class ImageCrawler
 
             // Call platform dependant lambda image creating function to
             // create a new platform image from the input stream.
-            Image image = new Image(new URL(url),
-                    mNewImageFunction.apply(inputStream, item));
+            Image image = new Image(url, mNewImageFunction.apply(inputStream, item));
 
             // Save the image into the cache.
             try (OutputStream outputStream =
@@ -288,6 +322,69 @@ public abstract class ImageCrawler
 
             return image;
         } catch (IOException e) {
+            throw ExceptionUtils.unchecked(e);
+        }
+    }
+
+    /**
+     * Calls platform dependant URI mapping method to create
+     * an input stream for the passed url.
+     *
+     * @param url An image URL.
+     * @return An open InputStream for accessing URL data.
+     */
+    public InputStream mapUriToInputStream(String url) {
+        return mMapUriToInputStream.apply(url);
+    }
+
+    /**
+     * Creates a new cached image from the passed {@link InputStream).
+     *
+     * @param url         The image url.
+     * @param tag         The optional image tag (only for transformed images).
+     * @param inputStream The image {@link InputStream}.
+     * @return A cached {@link Image} instance.
+     */
+    public Image createImage(String url, @Nullable String tag, InputStream inputStream) {
+        Cache.Item item = createNewCacheItem(url, tag);
+
+        // Call platform dependant lambda image creating function to
+        // create a new platform image from the input stream.
+
+        try {
+            Image image = new Image(url, mNewImageFunction.apply(inputStream, item));
+            // Save the image into the cache.
+            try (OutputStream outputStream =
+                         item.getOutputStream(Cache.Operation.WRITE, image.size())) {
+                image.writeImage(outputStream);
+            } catch (Exception e) {
+                throw ExceptionUtils.unchecked(e);
+            }
+            return image;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw ExceptionUtils.unchecked(e);
+        }
+    }
+
+    /**
+     * Creates a cacheable transformed Image instance using the passed
+     * base image url/name and the bytes from the {@link
+     * TransformedImage} passed back from a call to the remote
+     * transform microservices API.
+     *
+     * @param image            Base image that was transformed
+     * @param transformedImage Transformed image returned by API call
+     * @return A cacheable transformed {@link Image}
+     */
+    public Image createImage(Image image, TransformedImage transformedImage) {
+        try (InputStream inputStream =
+                     new ByteArrayInputStream(transformedImage.getBytes())) {
+            String url = image.getSourceUrl().toString();
+            String tag = transformedImage.getTransformName();
+            return createImage(url, tag, inputStream);
+        } catch (IOException e) {
+            e.printStackTrace();
             throw ExceptionUtils.unchecked(e);
         }
     }
@@ -307,10 +404,9 @@ public abstract class ImageCrawler
     /**
      * Factory method that makes a new {@code TransformDecoratorWithImage}.
      */
-    protected TransformDecoratorWithImage
-    makeTransformDecoratorWithImage(Transform transform,
-                                    Image image) {
-        return new TransformDecoratorWithImage(transform, image);
+    protected TransformImageDecorator
+    makeTransformDecoratorWithImage(Transform transform, Image image) {
+        return new TransformImageDecorator(transform, image);
     }
 
     /**
@@ -335,7 +431,7 @@ public abstract class ImageCrawler
 
     /**
      * Attempts to add a new cache item for this image transform using
-     * the original image and transform group id as a lookup key. If
+     * the original image and transform name as a lookup key. If
      * the cache doesn't already contain a matching item, addItem will
      * atomically create a cache entry along with a new file based a
      * the key constructed url/transform id pair and will return true
@@ -345,29 +441,30 @@ public abstract class ImageCrawler
      * added to the cache and false if it was not added (already
      * in cache).
      */
-    protected boolean createNewCacheItem(Image image,
-                                         Transform transform) {
+    public boolean createNewCacheItem(Image image, Transform transform) {
         log("Attempting to add a cache item for transform: %s",
                 image.getSourceUrl());
 
         // Cache expects a group id string or null which defaults to "raw".
-        String groupId = transform != null ? transform.getName() : null;
+        String tag = transform != null ? transform.getName() : null;
 
-        // Try to add a new item for this image to the cache. If
-        // a matching item does not exist and a new item was added
-        // to the cache, this call will return true, otherwise false
-        // is returned indicating that the add operation was not
-        // performed.
-        boolean wasAdded =
-                mImageCache.addItem(
-                        image.getSourceUrl().toString(), groupId, null);
+        // Call helper method to do the actual adding.
+        return createNewCacheItem(image.getSourceUrl().toString(), tag) != null;
+    }
 
-        log("Transform [" + image.getSourceUrl() + "|" + groupId + "]" +
-                (wasAdded ? "was added to the cache."
-                        : "was already in the cache."));
-
-        // Return whether or an image item was added to the cache.
-        return wasAdded;
+    /**
+     * Attempts to add a new cache item for this image using using the
+     * specified tag.
+     *
+     * @return existing or newly created cached item
+     */
+    public Cache.Item createNewCacheItem(String url, @Nullable String tag) {
+        Cache.Item item = mImageCache.getItem(url, tag);
+        if (item != null) {
+            return item;
+        } else {
+            return mImageCache.addNewItem(url, tag);
+        }
     }
 
     /**
@@ -424,9 +521,10 @@ public abstract class ImageCrawler
      * @param image A downloaded image.
      * @return a future to a transformed image.
      */
-    protected CompletableFuture<Image> applyTransformAsync(Transform transform,
-                                                           Image image) {
-
+    protected CompletableFuture<Image> applyTransformAsync(
+            Transform transform,
+            Image image
+    ) {
         // Asynchronously transform an image.
         return CompletableFuture.supplyAsync(() -> {
             // This method will only be called if a new empty
@@ -501,10 +599,8 @@ public abstract class ImageCrawler
 
         /**
          * Creates the specified {@code type} transform. Any images
-         * downloaded using
-         * this transform will be saved in a folder that has the same name as
-         * the
-         * transform class.
+         * downloaded using this transform will be saved in a folder
+         * that has the same name as the transform class.
          *
          * @param crawlerType Type of transform.
          * @param controller  A controller that contains all crawler options and
@@ -529,12 +625,52 @@ public abstract class ImageCrawler
          *                     platform dependent support methods.
          * @return A list of new crawler instances.
          */
-        public static List<ImageCrawler> newCrawlers(List<CrawlerType> crawlerTypes,
-                                                     Controller controller) {
+        public static List<ImageCrawler> newCrawlers(
+                List<CrawlerType> crawlerTypes,
+                Controller controller
+        ) {
             return crawlerTypes
                     .stream()
                     .map(type -> newCrawler(type, controller))
                     .collect(Collectors.toList());
         }
+    }
+
+    /**
+     * Flag used to run transforms locally or remotely using
+     * microservices.
+     */
+    protected boolean runLocalTransforms() {
+        return mLocalTransforms;
+    }
+
+    /**
+     * Flag used to run transforms locally or remotely using
+     * microservices.
+     */
+    protected boolean runRemoteTransforms() {
+        return !runLocalTransforms();
+    }
+
+    /**
+     * Accessor for remote data source
+     */
+    protected RemoteDataSource getRemoteDataSource() {
+        return mRemoteDataSource;
+    }
+
+    /**
+     * Constructs a list of transform names used by remote
+     * microservices API call.
+     *
+     * @return A list of transform names.
+     */
+    @NotNull
+    protected List<String> getTransformNames() {
+        // Build list of transform names for API call.
+        return mTransforms
+                .stream()
+                .map(Transform::getName)
+                .collect(Collectors.toList());
     }
 }

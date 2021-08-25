@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.BlendMode
 import android.graphics.BlendModeColorFilter
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.graphics.PorterDuff.Mode
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -20,14 +19,17 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import edu.vanderbilt.crawler.R
-import edu.vanderbilt.crawler.extensions.*
+import edu.vanderbilt.crawler.extensions.asyncLoad
+import edu.vanderbilt.crawler.extensions.asyncLoadGif
+import edu.vanderbilt.crawler.extensions.clear
+import edu.vanderbilt.crawler.extensions.minmax
 import edu.vanderbilt.crawler.ui.screens.pager.PagedAdapterClient
 import edu.vanderbilt.crawler.ui.screens.settings.Settings
 import edu.vanderbilt.crawler.utils.KtLogger
 import edu.vanderbilt.crawler.viewmodels.Resource
 import edu.vanderbilt.crawler.viewmodels.Resource.State.*
-import org.jetbrains.anko.find
 import java.io.File
+import kotlin.math.ceil
 
 /**
  * Adapter that displays an image URL and its associated image.
@@ -53,8 +55,8 @@ class ImageViewAdapter(context: Context,
     }
 
     companion object {
-        val KEY_PROGRESS_VALUE = "key_progress_value"
-        val KEY_SIZE = "key_size"
+        const val KEY_PROGRESS_VALUE = "key_progress_value"
+        const val KEY_SIZE = "key_size"
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
@@ -140,14 +142,14 @@ class ImageViewAdapter(context: Context,
         when (newState) {
             CREATE, LOAD ->
                 error("Illegal state change " +
-                      "${oldState.name} -> ${newState.name}")
+                        "${oldState.name} -> ${newState.name}")
             PROCESS,
             READ,
             WRITE,
             DOWNLOAD ->
                 if (oldState != CREATE) {
                     error("Illegal state change " +
-                          "${oldState.name} -> ${newState.name}")
+                            "${oldState.name} -> ${newState.name}")
                 }
             CLOSE,
             CANCEL -> {
@@ -174,6 +176,17 @@ class ImageViewAdapter(context: Context,
         }
     }
 
+    fun findItem(url: String): Int {
+        val item = items.find { it.url == url }
+        return if (item == null) -1 else items.indexOf(item)
+    }
+
+    fun remove(url: String) {
+        items.find { it.url == url }?.also {
+            remove(items.indexOf(it))
+        }
+    }
+
     /**
      * Inner view holder implementation that also implements
      * PagedAdapterViewHolder to set a unique transition name
@@ -188,12 +201,12 @@ class ImageViewAdapter(context: Context,
         : SelectableViewHolder(view) {
 
         private lateinit var url: String
-        private val textView: TextView? = if (gridLayout) null else view.find(R.id.textView)
-        private val threadView = view.find<TextView>(R.id.thread)
-        private val imageView = view.find<ImageView>(R.id.imageView)
-        internal val sizeView = view.find<TextView>(R.id.imageSize)
-        private val progressBar = view.find<ProgressBar>(R.id.progressBar)
-        private val stateView = view.find<TextView>(R.id.state)
+        private val textView: TextView? = if (gridLayout) null else view.findViewById(R.id.textView)
+        private val threadView = view.findViewById<TextView>(R.id.thread)
+        private val imageView = view.findViewById<ImageView>(R.id.imageView)
+        internal val sizeView = view.findViewById<TextView>(R.id.imageSize)
+        private val progressBar = view.findViewById<ProgressBar>(R.id.progressBar)
+        private val stateView = view.findViewById<TextView>(R.id.state)
 
         fun bind(resource: Resource) {
             url = resource.url
@@ -261,13 +274,13 @@ class ImageViewAdapter(context: Context,
             }
         }
 
-        internal fun roundSizeToNearestK(context: Context, size: Int): String {
+        private fun roundSizeToNearestK(context: Context, size: Int): String {
             return if (size == 0) {
                 context.getString(R.string.image_size_format, 0f)
             } else {
                 context.getString(
                         R.string.image_size_format,
-                        Math.ceil(size.toFloat() / 1e3))
+                        ceil(size.toFloat() / 1e3))
             }
         }
 
@@ -288,7 +301,7 @@ class ImageViewAdapter(context: Context,
             }
         }
 
-        fun Drawable.setPorterDuffSrcInColorFilter(color: Int) {
+        private fun Drawable.setPorterDuffSrcInColorFilter(color: Int) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 colorFilter = BlendModeColorFilter(color, BlendMode.SRC_IN)
             } else {
@@ -430,7 +443,7 @@ class ImageViewAdapter(context: Context,
             fun areItemsTheSame(oldItem: Resource, newItem: Resource) =
                     // Only care if items are the same not their contents.
                     oldItem.url == newItem.url &&
-                    oldItem.filePath == newItem.filePath
+                            oldItem.filePath == newItem.filePath
         }
 
         override fun getOldListSize(): Int = oldList.size

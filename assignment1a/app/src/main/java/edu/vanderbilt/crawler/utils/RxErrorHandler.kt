@@ -3,7 +3,6 @@ package edu.vanderbilt.crawler.utils
 import io.reactivex.exceptions.UndeliverableException
 import java.io.IOException
 import java.net.SocketException
-import java.util.concurrent.CancellationException
 
 /**
  * RxJavaPlugin error handler.

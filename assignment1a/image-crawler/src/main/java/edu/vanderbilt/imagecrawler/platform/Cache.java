@@ -27,7 +27,6 @@ import java.util.function.Function;
 
 import edu.vanderbilt.imagecrawler.crawlers.ImageCrawler;
 import edu.vanderbilt.imagecrawler.utils.Options;
-import io.reactivex.annotations.NonNull;
 
 /**
  * A safe file based cache implementation that uses a ConcurrentHashMap
@@ -186,8 +185,8 @@ public class Cache {
      * @return The web URL that was originally used to download the passed
      * cache file.
      */
-    @NonNull
-    public static String getSourceUriFromCacheUri(@NonNull String cacheFilePath) {
+    @NotNull
+    public static String getSourceUriFromCacheUri(@NotNull String cacheFilePath) {
         try {
             String fileName = new File(cacheFilePath).getName();
             String[] split = fileName.split("-", 2);
@@ -353,6 +352,24 @@ public class Cache {
     public Item getItem(@NotNull String uri, @Nullable String tag) {
         String cacheKey = getEncodedKey(uri, tag);
         return mCacheMap.get(cacheKey);
+    }
+
+    /**
+     * Adds a new item to the cache.
+     *
+     * @param uri A uri where the image originates from {@link String}.
+     * @param tag A grouping tag {@link String} or null for the default group.
+     * @param tag A Consumer lambda used to process the newly created item.
+     * @return {@link Item} A new item if created, the existing item if
+     * the item already exists.
+     */
+    public Item addNewItem(@NotNull String uri,
+                           @Nullable String tag) {
+        if (!internalAddOrGet(uri, tag, null).mWasAdded) {
+            throw new RuntimeException("Item already exists");
+        }
+
+        return internalAddOrGet(uri, tag, null).mItem;
     }
 
     /**
@@ -1231,8 +1248,8 @@ public class Cache {
         if (Thread.interrupted()) {
             // Clear interrupted flag and throw an IO based exception.
             throw new ClosedByInterruptException();
+        } else {
+            item.progress(operation, progress, size / 5);
         }
-
-        item.progress(operation, progress, size / 5);
     }
 }

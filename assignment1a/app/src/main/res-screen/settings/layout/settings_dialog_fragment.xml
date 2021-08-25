@@ -56,7 +56,7 @@
     <TextView
         style="@style/Widget.Settings.RowTitle"
         android:layout_gravity="start|center_vertical"
-        android:text="Mode" />
+        android:text="Images" />
 
     <RadioGroup
         android:id="@+id/settingsImageSourceRadioGroup"
@@ -77,6 +77,38 @@
 
         <RadioButton
             android:id="@+id/settingsRemoteCrawl"
+            style="@style/Widget.Settings.TextStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Remote" />
+    </RadioGroup>
+
+    <TextView
+        android:id="@+id/settingsTransformsLabel"
+        style="@style/Widget.Settings.RowTitle"
+        android:layout_gravity="start|center_vertical"
+        android:text="Transforms" />
+
+    <RadioGroup
+        android:id="@+id/settingsTransformsSourceRadioGroup"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start|center_vertical|fill_horizontal"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/settingsLocalTransforms"
+            style="@style/Widget.Settings.TextStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Local" />
+
+        <RadioButton
+            android:id="@+id/settingsRemoteTransforms"
             style="@style/Widget.Settings.TextStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -142,7 +174,7 @@
         android:layout_gravity="start|center_vertical"
         android:text="Progress" />
 
-    <Switch
+    <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/settingsShowProgress"
         style="@style/Widget.Settings.RowWidget"
         android:layout_gravity="start|center_vertical" />
@@ -152,7 +184,7 @@
         android:layout_gravity="start|center_vertical"
         android:text="Size" />
 
-    <Switch
+    <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/settingsShowSize"
         style="@style/Widget.Settings.RowWidget"
         android:layout_gravity="start|center_vertical" />
@@ -162,7 +194,7 @@
         android:layout_gravity="start|center_vertical"
         android:text="State" />
 
-    <Switch
+    <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/settingsShowState"
         style="@style/Widget.Settings.RowWidget"
         android:layout_gravity="start|center_vertical" />
@@ -172,7 +204,7 @@
         android:layout_gravity="start|center_vertical"
         android:text="Thread" />
 
-    <Switch
+    <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/settingsShowThread"
         style="@style/Widget.Settings.RowWidget"
         android:layout_gravity="start|center_vertical" />
@@ -223,7 +255,7 @@
         android:layout_gravity="start|center_vertical"
         android:text="Speed bar" />
 
-    <Switch
+    <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/settingsShowSpeedBar"
         style="@style/Widget.Settings.RowWidget"
         android:layout_gravity="start|center_vertical" />
@@ -270,8 +302,30 @@
         android:layout_gravity="start|center_vertical"
         android:text="Logging" />
 
-    <Switch
+    <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/settingsDebugOutput"
         style="@style/Widget.Settings.RowWidget"
         android:layout_gravity="start|center_vertical" />
+
+    <TextView
+        style="@style/Widget.Settings.RowTitle"
+        android:layout_gravity="start|center_vertical"
+        android:text="Save On Exit" />
+
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/settingsSaveOnExit"
+        style="@style/Widget.Settings.RowWidget"
+        android:layout_gravity="start|center_vertical" />
+
+    <TextView
+        style="@style/Widget.Settings.RowTitle"
+        android:layout_gravity="start|center_vertical"
+        android:text="Defaults" />
+
+    <Button
+        android:id="@+id/settingsResetToDefaults"
+        style="@style/Widget.Settings.RowWidget"
+        android:layout_gravity="start|center_vertical"
+        android:text="Reset" />
+
 </GridLayout>

@@ -4,16 +4,25 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Spliterator;
+import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+
+import static edu.vanderbilt.imagecrawler.utils.Assignment.Name.Assignment1a;
+import static edu.vanderbilt.imagecrawler.utils.Assignment.Name.Assignment1b;
+import static edu.vanderbilt.imagecrawler.utils.Assignment.Name.Assignment2a;
+import static edu.vanderbilt.imagecrawler.utils.Assignment.isAssignment;
+import static edu.vanderbilt.imagecrawler.utils.Assignment.isGraduate;
+import static edu.vanderbilt.imagecrawler.utils.Assignment.isUndergraduate;
 
 /**
  * A generic unsynchronized array class implemented via a single
  * contiguous buffer.
  */
 @SuppressWarnings("ALL")
-public class UnsynchronizedArray<E>
-        implements Array<E> {
+public class UnsynchronizedArray<E> implements Array<E> {
     /**
      * Default initial capacity (declared 'protected' for unit tests).
      */
@@ -43,7 +52,11 @@ public class UnsynchronizedArray<E>
      */
 
     /**
-     * Constructs an empty array with an initial capacity of ten.
+     * Sets element data to immutable static zero-sized array, which
+     * is used later by the ensureCapacityInternal() method to
+     * construct an empty array with an initial capacity of
+     * DEFAULT_CAPACITY "on demand", i.e., when it's actually
+     * necessary.
      */
     public UnsynchronizedArray() {
         mElementData = EMPTY_ELEMENTDATA;
@@ -101,6 +114,7 @@ public class UnsynchronizedArray<E>
      * @return the index of the first occurrence of the specified element in
      * this array, or -1 if this array does not contain the element
      */
+    @Override
     public int indexOf(Object o) {
         // TODO -- you fill in here (replace 'return -1' with proper code).
         return -1;
@@ -213,8 +227,7 @@ public class UnsynchronizedArray<E>
      * Normally should be declared as 'private', but for unit test access,
      * has been declared 'protected'.
      */
-    @Override
-    public void ensureCapacityInternal(int minCapacity) {
+    protected void ensureCapacityInternal(int minCapacity) {
         // TODO -- you fill in here.
     }
 
@@ -296,8 +309,73 @@ public class UnsynchronizedArray<E>
      * sequence
      */
     public Iterator<E> iterator() {
-        // TODO -- you fill in here (replace 'return null' with proper code).
-        return null;
+        if (isGraduate(Assignment1a) || isUndergraduate(Assignment1b)) {
+            // TODO -- you fill in here replacing this statement with your solution.
+            return null;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Replaces each element of this list with the result of applying
+     * the operator to that element.  Errors or runtime exceptions
+     * thrown by the operator are relayed to the caller.
+     *
+     * @param operator the operator to applyTransform to each element
+     */
+    public void replaceAll(UnaryOperator<E> operator) {
+        // This method is a no-op in Assignment 1a.
+        if (isAssignment(Assignment1b)) {
+            // TODO - you fill in here (this implementation can use a for loop).
+        }
+    }
+
+    /*
+     * The following methods and nested class use Java 8 features.
+     */
+
+    /**
+     * Performs the given action for each element of the array until
+     * all elements have been processed or the action throws an
+     * exception.  Unless otherwise specified by the implementing
+     * class, actions are performed in the order of iteration (if an
+     * iteration order is specified).  Exceptions thrown by the action
+     * are relayed to the caller.
+     *
+     * @param action The action to be performed for each element
+     */
+    public void forEach(Consumer<? super E> action) {
+        if (isGraduate(Assignment1a)) {
+            // TODO - Graduate students you fill in here
+            //  using a for-each loop for assignment 1a.
+        } else if (isGraduate(Assignment1b)) {
+            // TODO - Graduate students you fill in here using the
+            //  Java stream forEach() method for assignment 1b.
+        } else if (isUndergraduate(Assignment1a)) {
+            // TODO - Undergraduate students you fill in here using
+            //  a simple for loop for assignment 1a.
+        } else if (isUndergraduate(Assignment1b)) {
+            // TODO - Undergraduate students you fill in here
+            //  using a for-each loop for assignment 1b.
+        } else {
+            throw new IllegalStateException("unreachable");
+        }
+    }
+
+    /**
+     * Creates a {@link Spliterator} over the elements in the array.
+     * The default method define here simply returns null.
+     * <p>
+     *
+     * @return null (not implemented in this base class)
+     */
+    public Spliterator<E> spliterator() {
+        if (isGraduate(Assignment1b) || isUndergraduate(Assignment2a)) {
+            return null;
+        } else {
+            throw new IllegalStateException("This exception should never occur.");
+        }
     }
 
     /**

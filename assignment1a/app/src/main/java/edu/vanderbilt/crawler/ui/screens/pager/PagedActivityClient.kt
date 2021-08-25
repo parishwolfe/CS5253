@@ -13,11 +13,11 @@ import androidx.core.app.ActivityOptionsCompat
 import androidx.core.app.SharedElementCallback
 import androidx.core.view.ViewCompat
 import androidx.recyclerview.widget.RecyclerView
+import edu.vanderbilt.crawler.extensions.contentView
 import edu.vanderbilt.crawler.extensions.findImageViewWithTransitionName
 import edu.vanderbilt.crawler.extensions.findView
 import edu.vanderbilt.crawler.utils.KtLogger
 import edu.vanderbilt.crawler.utils.warn
-import org.jetbrains.anko.contentView
 
 /**
  * Required interface for any RecyclerView activity that starts a

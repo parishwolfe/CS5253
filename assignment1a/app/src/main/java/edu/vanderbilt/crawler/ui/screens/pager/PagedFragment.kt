@@ -10,9 +10,9 @@ import android.widget.ImageView
 import androidx.core.view.ViewCompat
 import androidx.fragment.app.Fragment
 import edu.vanderbilt.crawler.R
+import edu.vanderbilt.crawler.databinding.FragmentPagedBinding
 import edu.vanderbilt.crawler.extensions.asyncLoad
 import edu.vanderbilt.crawler.utils.UriUtils
-import kotlinx.android.synthetic.main.fragment_paged.*
 import java.io.File
 import java.net.URLDecoder
 
@@ -74,6 +74,8 @@ class PagedFragment : Fragment() {
      */
     lateinit private var mPagedFragmentListener: OnPagedFragmentCallback
 
+    private lateinit var binding: FragmentPagedBinding
+
     /**
      * Returns the default title which is the last path component of the source uri.
      *
@@ -106,7 +108,6 @@ class PagedFragment : Fragment() {
             // val title = UriUtils.getLastPathSegmentBaseName(uri)
             // return if (!title.isBlank()) title else getString(R.string.no_title)
         }
-
         set(string) {
             activity?.title = string
         }
@@ -156,14 +157,8 @@ class PagedFragment : Fragment() {
             inflater: LayoutInflater,
             container: ViewGroup?,
             savedInstanceState: Bundle?): View? {
-
-        // Inflate the layout for this fragment
-        val view = inflater.inflate(R.layout.fragment_paged, container, false)
-
-        // Set the default title.
-        //title = title
-
-        return view
+        binding = FragmentPagedBinding.inflate(layoutInflater, container, false)
+        return binding.root
     }
 
     /**
@@ -173,12 +168,6 @@ class PagedFragment : Fragment() {
      */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        if (pagedImageView == null) {
-            throw AssertionError()
-        }
-
-        // Load the default image.
         loadImage(uri)
     }
 
@@ -189,13 +178,15 @@ class PagedFragment : Fragment() {
      */
     private fun loadImage(uri: Uri) {
         // Asynchronously load the bitmap.
-        pagedImageView?.apply {
-            ViewCompat.setTransitionName(this, position.toString())
-            asyncLoad(uri.toString()) {
-                if (it) {
-                    mPagedFragmentListener.onSharedElementReady(this, true)
-                } else {
-                    mPagedFragmentListener.onSharedElementReady(this, false)
+        with(binding) {
+            pagedImageView.apply {
+                ViewCompat.setTransitionName(this, position.toString())
+                asyncLoad(uri.toString()) {
+                    if (it) {
+                        mPagedFragmentListener.onSharedElementReady(this, true)
+                    } else {
+                        mPagedFragmentListener.onSharedElementReady(this, false)
+                    }
                 }
             }
         }

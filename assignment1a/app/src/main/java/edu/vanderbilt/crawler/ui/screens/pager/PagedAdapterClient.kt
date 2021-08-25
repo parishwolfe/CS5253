@@ -66,7 +66,7 @@ interface PagedAdapterClient {
     fun onBindPagedAdapterViewHolder(holder: RecyclerView.ViewHolder) {
         val imageView = holder.itemView.findView {it is ImageView}
                         ?: error("PagedAdapterClient: unable to find an ImageView")
-        setTransitionName(holder.adapterPosition, imageView as ImageView)
+        setTransitionName(holder.bindingAdapterPosition, imageView as ImageView)
     }
 
     /**

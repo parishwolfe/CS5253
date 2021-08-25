@@ -83,7 +83,7 @@ class MainViewModel(app: Application) : BaseViewModel(app), Cache.Observer, KtLo
     private var threads = ConcurrentHashMap<Long, Int>()
 
     /** Support collection for cached resources live data feed. */
-    private var hashMap = ConcurrentHashMap<Cache.Item, Resource>()
+    private var cacheMap = ConcurrentHashMap<Cache.Item, Resource>()
 
     /**
      * Called to subscribe to live data. Sets the live data observer and
@@ -251,24 +251,60 @@ class MainViewModel(app: Application) : BaseViewModel(app), Cache.Observer, KtLo
      * clear the mutable live data will be propagated to the
      * app layer which will clear the dependent UI elements
      * so there is no need to rely on event callbacks from
-     * the cache as items are .
+     * the cache as items are deleted.
      */
     @MainThread
-    private fun clearAll() {
+    fun clearAll() {
+        if (state == RUNNING || state == CANCELLING) {
+            warn("Unable to clear items when crawl is running or being cancelled.")
+            return
+        }
+
+        state = IDLE
+
         AndroidCache.stopWatching(this)
-        cacheContentsFeed.postValue(mutableListOf())
-        hashMap.clear()
+        AndroidCache.clear()
+        cacheMap.clear()
         threads.clear()
+        postCacheContents()
+
         //TODOx: fix issue and then change to check
-        if (hashMap.size != 0) {
-            warn("HashMap.clear() results in size of ${hashMap.size}")
+        if (cacheMap.size != 0) {
+            warn("HashMap.clear() results in size of ${cacheMap.size}")
         }
         //TODOx: fix issue and then change to check
         if (threads.size != 0) {
             warn("threads.clear() results in size of ${threads.size}")
         }
-        AndroidCache.clear()
+
         AndroidCache.startWatching(this, false)
+    }
+
+    fun delete(list: List<Resource>) {
+        if (state == RUNNING || state == CANCELLING) {
+            warn("Unable to delete items when crawl is running or being cancelled.")
+            return
+        }
+
+        state = IDLE
+
+        list.forEach { resource ->
+            // Edge case: clear item from local cache in case the item
+            // is not in the AndroidCache (in which case remove() will not
+            // end up posting a delete event to cache observers).
+            AndroidCache.remove(resource.url)
+            cacheMap.entries.firstOrNull { entry ->
+                entry.value.url == resource.url
+            }?.let {
+                event(Cache.Operation.DELETE, it.key, -1f)
+            }
+        }
+
+        //postCacheContents()
+
+        check(state == IDLE) {
+            "State should be IDLE after deleting items but state is $state."
+        }
     }
 
     /**
@@ -280,8 +316,8 @@ class MainViewModel(app: Application) : BaseViewModel(app), Cache.Observer, KtLo
     private fun postFinalCrawlResultsList(endState: CrawlState) {
         // When a crawl is cancelled Update any cached entries to have a CLOSED state to signal
         // that UI that they should consider these values all finished
-        synchronized(hashMap) {
-            hashMap.forEach { (key, value) ->
+        synchronized(cacheMap) {
+            cacheMap.forEach { (key, value) ->
                 when (value.state) {
                     Resource.State.LOAD,
                     Resource.State.CLOSE -> {
@@ -289,12 +325,12 @@ class MainViewModel(app: Application) : BaseViewModel(app), Cache.Observer, KtLo
                     }
                     else -> {
                         if (endState == CANCELLED) {
-                            hashMap[key] = value.copy(state = Resource.State.CANCEL)
+                            cacheMap[key] = value.copy(state = Resource.State.CANCEL)
                         }
                     }
                 }
             }
-            val mutableList = hashMap.values.toMutableList()
+            val mutableList = cacheMap.values.toMutableList()
             mutableList.sortBy { it.timestamp }
             cacheContentsFeed.postValue(mutableList)
         }
@@ -327,11 +363,12 @@ class MainViewModel(app: Application) : BaseViewModel(app), Cache.Observer, KtLo
         }
 
         if (operation == Cache.Operation.DELETE) {
-            if (hashMap.remove(item) == null) {
-                // Some other thread must have beaten this thread to the punch
-                // and will also have taken care of updating the UI layer.
-                return
-            }
+            // There's and edge case where an item may be in the recycler view
+            // but not have a hashMap entry due. To ensure that the hashMap and
+            // recycler view adapter do not get out of sync, always fall through
+            // here and allow the code at the end of this method to run and
+            // refresh the adapter list from the cash.
+            cacheMap.remove(item)
         } else {
             // Add the thread to the map if not already there and set it's value to
             // the size of the map. This value is displayed in the UI to identify
@@ -351,7 +388,7 @@ class MainViewModel(app: Application) : BaseViewModel(app), Cache.Observer, KtLo
 
             // Only add resource if the map doesn't
             // already contain a resource for this item.
-            val oldResource = hashMap.putIfAbsent(item, resource)
+            val oldResource = cacheMap.putIfAbsent(item, resource)
 
             // Check if item key was already in the hashMap.
             oldResource?.let {
@@ -362,15 +399,19 @@ class MainViewModel(app: Application) : BaseViewModel(app), Cache.Observer, KtLo
                 // the putIfAbsent() call and the following replace() call. In
                 // this case, that thread will update the UI layer and this
                 // thread can simply return.
-                if (oldResource == resource || !hashMap.replace(item, it, resource)) {
+                if (oldResource == resource || !cacheMap.replace(item, it, resource)) {
                     return
                 }
             }
         }
 
+        postCacheContents()
+    }
+
+    private fun postCacheContents() {
         // Update the UI layer by converting the hashMap to a sorted list that
         // is then posted to the LiveData feed.
-        val mutableList = hashMap.values.toMutableList()
+        val mutableList = cacheMap.values.toMutableList()
 
         // The posted list is sorted by item creation timestamps so that the UI
         // layer will consistently show each item in the same logical time ordered
@@ -378,7 +419,7 @@ class MainViewModel(app: Application) : BaseViewModel(app), Cache.Observer, KtLo
         mutableList.sortBy { it.timestamp }
 
         // Post the sorted list as an immutable list. The live data feed is typed
-        // to MutableLiveDatga<List<Resource>> so the passed list will be received
+        // to MutableLiveData<List<Resource>> so the passed list will be received
         // as immutable.
         cacheContentsFeed.postValue(mutableList)
     }
